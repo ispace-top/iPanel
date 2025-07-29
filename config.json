@@ -7,19 +7,54 @@
       "icon": "prebuilt:docker"
     },
     {
-      "name": "File Browser",
-      "url": "https://file.itjl.top:91",
+      "name": "Jellyfin",
+      "url": "https://book.itjl.top:91",
+      "icon": "prebuilt:emby"
+    },
+    {
+      "name": "书库",
+      "url": "https://webdav.itjl.top:91",
+      "icon": "prebuilt:books"
+    },
+    {
+      "name": "Wiki文档",
+      "url": "https://doc.itjl.top:91",
+      "icon": "prebuilt:documents"
+    },
+    {
+      "name": "路由器",
+      "url": "https://router.itjl.top:91",
+      "icon": "prebuilt:router"
+    },
+    {
+      "name": "BT下载",
+      "url": "",
+      "icon": "prebuilt:download"
+    },
+    {
+      "name": "Alist",
+      "url": "",
       "icon": "prebuilt:storage"
     },
     {
-      "name": "WebDAV",
-      "url": "https://webdav.itjl.top:91",
-      "icon": "prebuilt:filebrowser"
+      "name": "Git",
+      "url": "https://git.itjl.top:91",
+      "icon": "prebuilt:unraid"
     },
     {
-      "name": "NAS Dashboard",
-      "url": "/dashboard",
-      "icon": "prebuilt:truenas"
+      "name": "WebDav",
+      "url": "",
+      "icon": "prebuilt:storage"
+    },
+    {
+      "name": "青龙面板",
+      "url": "",
+      "icon": "prebuilt:plex"
+    },
+    {
+      "name": "相册",
+      "url": "",
+      "icon": "prebuilt:synology"
     }
   ],
   "weather": {

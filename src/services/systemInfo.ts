@@ -11,7 +11,6 @@ export async function getSystemInfo() {
             fansData = await (si as any).fans();
             // oxlint-disable-next-line no-unused-vars
         } catch (error) {
-            console.warn("无法获取风扇转速数据，您的系统可能不支持此功能。(Could not get fan speed data, your system may not support this feature.)");
         }
 
         // 并行获取所有其他数据以提高性能

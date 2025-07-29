@@ -1,4 +1,5 @@
 {
+  "siteTitle": "NAS 控制台",
   "navItems": [
     {
       "name": "Docker",
@@ -31,9 +32,9 @@
     "type": "bing",
     "value": ""
   },
-  "passwordHash": "30c09551586f07395235e960743fa35ad90256326cbaf1b69a8f4f43cd900a96",
   "search": {
     "engines": [],
-    "defaultEngine": ""
-  }
+    "defaultEngine": "Google"
+  },
+  "passwordHash": "30c09551586f07395235e960743fa35ad90256326cbaf1b69a8f4f43cd900a96"
 }

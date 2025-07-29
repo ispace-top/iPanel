@@ -3,48 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAS 控制台</title>
+    <title>正在加载...</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-slate-200">
 
-    <!-- 统一的顶部 Header -->
-    <header class="fixed top-0 left-0 right-0 p-4 z-40">
-        <div class="max-w-screen-2xl mx-auto flex items-center justify-between gap-4">
-            <!-- 搜索栏容器 -->
-            <div class="flex-grow max-w-xl mx-auto">
-                <form id="search-container" class="relative flex items-center w-full">
-                    <div id="engine-selector-container" class="relative flex-shrink-0">
-                        <button type="button" id="engine-selector-btn" class="h-12 w-12 flex items-center justify-center bg-white/20 backdrop-blur-md rounded-l-full hover:bg-white/30 transition-colors"></button>
-                        <div id="engine-dropdown" class="hidden absolute top-full mt-2 left-0 bg-white/20 backdrop-blur-md rounded-xl shadow-lg w-40 overflow-hidden"></div>
-                    </div>
-                    <input type="text" id="search-input" placeholder="搜索..." class="h-12 w-full px-4 bg-white/10 backdrop-blur-md focus:outline-none placeholder:text-slate-400 text-slate-100">
-                    <button type="submit" id="search-button" class="h-12 w-12 flex items-center justify-center bg-white/20 backdrop-blur-md rounded-r-full hover:bg-white/30 transition-colors">
-                        <i data-lucide="search" class="w-5 h-5"></i>
+    <header class="fixed top-0 left-0 right-0 p-4 z-10 flex justify-center">
+        <div class="w-full max-w-2xl flex items-center justify-between gap-4">
+             <!-- 搜索栏 -->
+            <div id="search-bar-container" class="flex-grow flex items-center bg-white/10 backdrop-blur-md rounded-full shadow-lg h-12 px-2">
+                <div class="relative h-full flex items-center">
+                    <button id="engine-select-btn" class="flex items-center justify-center h-10 w-10 rounded-full hover:bg-white/20 transition-colors">
+                        <!-- SVG将在JS中动态设置 -->
                     </button>
-                </form>
+                    <div id="engine-dropdown" class="hidden absolute top-full mt-2 left-0 bg-white/20 backdrop-blur-md rounded-xl shadow-lg py-1 w-48">
+                        <!-- 搜索引擎列表将在JS中动态填充 -->
+                    </div>
+                </div>
+                <input type="text" id="search-input" placeholder="搜索..." class="w-full h-full bg-transparent focus:outline-none px-4 text-slate-100 placeholder:text-slate-400">
+                <button id="search-submit-btn" class="flex items-center justify-center h-10 w-12 text-slate-300 hover:text-white transition-colors">
+                    <i data-lucide="search"></i>
+                </button>
             </div>
             <!-- 设置按钮 -->
-            <button id="settings-btn" class="flex-shrink-0 backdrop-blur-md bg-white/20 p-2 rounded-full hover:bg-white/30 transition-colors">
+            <button id="settings-btn" class="flex-shrink-0 backdrop-blur-md bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors shadow-lg">
                 <i data-lucide="settings"></i>
             </button>
         </div>
     </header>
 
-    <main class="min-h-screen w-full flex items-center justify-center p-4 lg:p-6 pt-28">
+    <main class="min-h-screen w-full flex items-center justify-center p-4 pt-24 lg:p-6 lg:pt-24">
+        <!-- 整体宽度加宽 -->
         <div class="w-full max-w-screen-2xl flex flex-col lg:flex-row items-stretch justify-center gap-6">
+            <!-- 左侧边栏: 系统信息 -->
             <div id="system-info-container" class="backdrop-blur-md bg-white/10 p-4 rounded-xl shadow-lg w-full lg:w-80 flex-shrink-0 flex flex-col order-2 lg:order-1">
                 <h3 class="font-bold text-lg text-center flex-shrink-0">设备信息</h3>
                 <hr class="border-white/10 my-3">
                 <div id="system-info-content" class="text-sm space-y-4 flex-grow overflow-y-auto side-panel-body">正在加载系统信息...</div>
             </div>
+
+            <!-- 中间: 导航面板 -->
             <div class="backdrop-blur-md bg-white/10 p-4 sm:p-6 rounded-xl shadow-lg w-full lg:flex-grow order-1 lg:order-2">
                  <div id="nav-container" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4">
                     <div class="text-center p-4 rounded-lg col-span-full">正在加载导航...</div>
                 </div>
             </div>
+
+            <!-- 右侧边栏: 天气信息 -->
             <div id="weather-container" class="backdrop-blur-md bg-white/10 p-4 rounded-xl shadow-lg w-full lg:w-80 flex-shrink-0 flex flex-col order-3">
                 <h3 class="font-bold text-lg text-center flex-shrink-0">天气信息</h3>
                 <hr class="border-white/10 my-3">
@@ -52,79 +59,127 @@
             </div>
         </div>
     </main>
-
+    
+    <!-- 密码输入弹窗 -->
     <div id="password-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-sm flex flex-col shadow-2xl text-slate-100">
-            <div class="p-4 border-b border-white/20 flex justify-between items-center">
+             <div class="p-4 border-b border-white/20 flex justify-between items-center">
                 <h2 class="text-xl font-bold">需要验证</h2>
-                <button id="close-password-modal-btn" class="p-1 rounded-full hover:bg-white/20"><i data-lucide="x"></i></button>
             </div>
-            <form id="password-form" class="p-6 space-y-4">
-                <label for="password-input" class="block text-sm font-medium">请输入密码:</label>
-                <input type="password" id="password-input" class="w-full bg-white/10 rounded-md p-2 border border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <p id="password-error" class="text-red-400 text-sm hidden">密码错误，请重试。</p>
-                <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">确认</button>
-            </form>
+            <div class="p-4 space-y-4">
+                <p>请输入密码以继续。</p>
+                <input type="password" id="password-input" class="w-full bg-transparent border-b border-white/30 p-2 focus:outline-none focus:border-white placeholder:text-slate-400">
+                <p id="password-error" class="text-red-400 text-sm hidden">密码错误！</p>
+            </div>
+             <div class="p-4 border-t border-white/20 text-right">
+                <button id="password-submit-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">确认</button>
+            </div>
         </div>
     </div>
 
-    <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <!-- 主设置弹窗 -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[50]">
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl text-slate-100">
             <div class="p-4 border-b border-white/20 flex justify-between items-center">
                 <h2 class="text-xl font-bold">设置</h2>
                 <button id="close-modal-btn" class="p-1 rounded-full hover:bg-white/20"><i data-lucide="x"></i></button>
             </div>
             <div class="flex-grow p-4 overflow-y-auto modal-body">
-                <div id="search-settings-container-wrapper">
-                    <h3 class="font-semibold text-lg mb-2">搜索引擎</h3>
-                    <div id="default-search-engines" class="space-y-2 mb-4"></div>
-                    <h4 class="font-semibold text-md mb-2">自定义搜索引擎</h4>
-                    <div id="custom-search-engines-container" class="space-y-2"></div>
-                    <button id="add-search-engine-btn" class="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">添加自定义引擎</button>
+                <!-- 通用设置 -->
+                <div>
+                    <h3 class="font-semibold text-lg mb-2">通用设置</h3>
+                    <div class="p-2 bg-white/10 rounded-lg flex items-center gap-2">
+                        <label for="site-title-input" class="flex-shrink-0">页面标题:</label>
+                        <input type="text" id="site-title-input" placeholder="输入页面标题" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
+                    </div>
                 </div>
+
+                <!-- 密码设置 -->
+                <div class="mt-6">
+                    <h3 class="font-semibold text-lg mb-2">安全与密码</h3>
+                    <div id="password-settings-container" class="space-y-2">
+                         <div class="p-2 bg-white/10 rounded-lg space-y-2">
+                            <input type="password" id="new-password-input" placeholder="输入新密码 (留空则不修改)" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
+                            <input type="password" id="confirm-password-input" placeholder="确认新密码" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
+                         </div>
+                    </div>
+                </div>
+
+                <!-- 导航项设置 -->
                 <div class="mt-6">
                     <h3 class="font-semibold text-lg mb-2">导航项目</h3>
                     <div id="nav-settings-container" class="space-y-2"></div>
                     <button id="add-nav-item-btn" class="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">添加导航项</button>
                 </div>
+
+                <!-- 天气城市设置 -->
                 <div class="mt-6">
                     <h3 class="font-semibold text-lg mb-2">天气城市</h3>
                     <div id="weather-settings-container" class="space-y-2"></div>
                     <button id="add-weather-city-btn" class="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">添加城市</button>
                 </div>
-                <div id="password-settings-section" class="mt-6">
-                    <h3 class="font-semibold text-lg mb-2">密码设置</h3>
-                    <div class="space-y-2">
-                        <div class="p-2 bg-white/10 rounded-lg">
-                            <input type="password" id="new-password-input" placeholder="输入新密码 (留空则不修改)" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
-                        </div>
-                        <div class="p-2 bg-white/10 rounded-lg">
-                            <input type="password" id="confirm-password-input" placeholder="再次输入新密码进行确认" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
-                        </div>
+
+                <!-- 搜索引擎设置 -->
+                 <div class="mt-6">
+                    <h3 class="font-semibold text-lg mb-2">搜索引擎</h3>
+                    <div id="search-settings-container" class="space-y-2">
+                        <!-- 搜索引擎将在JS中动态填充 -->
                     </div>
+                    <button id="add-search-engine-btn" class="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">添加自定义引擎</button>
                 </div>
+                
+                <!-- 背景设置 -->
                 <div class="mt-6">
                     <h3 class="font-semibold text-lg mb-2">背景设置</h3>
                     <div id="background-settings-container" class="space-y-3">
-                        <label class="flex items-center gap-2 p-2 bg-white/10 rounded-lg"><input type="radio" name="bg-type" value="bing" class="form-radio h-4 w-4 text-blue-500 bg-transparent border-white/30"><span>使用每日壁纸</span></label>
-                        <label class="flex items-center gap-2 p-2 bg-white/10 rounded-lg"><input type="radio" name="bg-type" value="url" class="form-radio h-4 w-4 text-blue-500 bg-transparent border-white/30"><span>使用自定义链接</span></label>
-                        <div id="bg-url-input-container" class="hidden pl-8"><input type="text" id="bg-url-input" placeholder="输入图片 URL" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400"></div>
-                        <label class="flex items-center gap-2 p-2 bg-white/10 rounded-lg"><input type="radio" name="bg-type" value="upload" class="form-radio h-4 w-4 text-blue-500 bg-transparent border-white/30"><span>上传自定义图片</span></label>
-                         <div id="bg-upload-container" class="hidden pl-8"><input type="file" id="bg-upload-input" class="hidden" accept="image/*"><button id="bg-upload-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-sm">选择文件</button><span id="bg-upload-path" class="ml-2 text-sm text-slate-300"></span></div>
+                        <label class="flex items-center gap-2 p-2 bg-white/10 rounded-lg">
+                            <input type="radio" name="bg-type" value="bing" class="form-radio h-4 w-4 text-blue-500 bg-transparent border-white/30">
+                            <span>使用每日壁纸</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 bg-white/10 rounded-lg">
+                            <input type="radio" name="bg-type" value="url" class="form-radio h-4 w-4 text-blue-500 bg-transparent border-white/30">
+                            <span>使用自定义链接</span>
+                        </label>
+                        <div id="bg-url-input-container" class="hidden pl-8">
+                            <input type="text" id="bg-url-input" placeholder="输入图片 URL" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
+                        </div>
+                        <label class="flex items-center gap-2 p-2 bg-white/10 rounded-lg">
+                            <input type="radio" name="bg-type" value="upload" class="form-radio h-4 w-4 text-blue-500 bg-transparent border-white/30">
+                            <span>上传自定义图片</span>
+                        </label>
+                         <div id="bg-upload-container" class="hidden pl-8">
+                            <input type="file" id="bg-upload-input" class="hidden" accept="image/*">
+                            <button id="bg-upload-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-sm">选择文件</button>
+                            <span id="bg-upload-path" class="ml-2 text-sm text-slate-300"></span>
+                        </div>
                     </div>
                 </div>
+
             </div>
-            <div class="p-4 border-t border-white/20 text-right"><button id="save-settings-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">保存设置</button></div>
+            <div class="p-4 border-t border-white/20 text-right">
+                <button id="save-settings-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">保存设置</button>
+            </div>
         </div>
     </div>
 
+    <!-- 图标选择弹窗 -->
     <div id="icon-picker-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-3xl h-[70vh] flex flex-col shadow-2xl text-slate-100">
-            <div class="p-4 border-b border-white/20 flex justify-between items-center"><h2 class="text-xl font-bold">选择图标</h2><div><button id="upload-from-picker-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">上传自定义图标</button><button id="close-icon-picker-btn" class="p-1 rounded-full hover:bg-white/20 ml-2"><i data-lucide="x"></i></button></div></div>
-            <div id="icon-picker-grid" class="flex-grow p-4 overflow-y-auto grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4"></div>
+            <div class="p-4 border-b border-white/20 flex justify-between items-center">
+                <h2 class="text-xl font-bold">选择图标</h2>
+                <div>
+                     <button id="upload-from-picker-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">上传自定义图标</button>
+                     <button id="close-icon-picker-btn" class="p-1 rounded-full hover:bg-white/20 ml-2"><i data-lucide="x"></i></button>
+                </div>
+            </div>
+            <div id="icon-picker-grid" class="flex-grow p-4 overflow-y-auto grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4">
+            </div>
         </div>
     </div>
-    
+
     <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>

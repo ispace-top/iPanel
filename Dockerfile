@@ -7,10 +7,8 @@ WORKDIR /app
 # 复制 package.json 和 yarn.lock 文件
 COPY package*.json yarn.lock ./
 
-# 安装 Yarn，因为基础镜像不自带
-RUN npm install -g yarn
-
 # 使用 yarn install --frozen-lockfile 更适合 CI/CD 环境
+# 基础镜像已包含 yarn，无需再次安装
 RUN yarn install --frozen-lockfile
 
 # 复制所有源代码
@@ -25,11 +23,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# 安装 Yarn
-RUN npm install -g yarn
-
 # 仅复制生产环境需要的依赖
 COPY package*.json yarn.lock ./
+# 基础镜像已包含 yarn，无需再次安装
 RUN yarn install --production --frozen-lockfile
 
 # 复制编译后的 JavaScript 代码

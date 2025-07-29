@@ -63,6 +63,8 @@
 
 3.  **运行容器**
 
+    为了让 iPanel 能够读取到您 **宿主机** 的真实硬件信息（而不是 Docker 容器的虚拟信息），我们需要在运行时将宿主的系统目录挂载到容器中。
+
     执行以下命令来启动 iPanel 容器：
     ```bash
     docker run -d \
@@ -70,14 +72,20 @@
       -p 3000:3000 \
       -v /your/path/to/config:/app/config \
       -v /your/path/to/uploads:/app/public/uploads \
+      -v /proc:/proc:ro \
+      -v /sys:/sys:ro \
+      -v /etc/os-release:/etc/os-release:ro \
       --restart always \
       YOUR_DOCKER_USERNAME/ipanel:latest
     ```
 
     **参数说明:**
     * `-p 3000:3000`: 将您主机的 3000 端口映射到容器的 3000 端口。您可以将冒号前的 `3000` 修改为您喜欢的任意端口。
-    * `-v /your/path/to/config:/app/config`: **（必需）** 将您主机上的配置目录挂载到容器中，这会持久化您的 `config.json` 和 `.env` 文件，确保容器更新或重建后配置不丢失。
-    * `-v /your/path/to/uploads:/app/public/uploads`: **（必需）** 将您上传的自定义图标和背景图保存在主机上。
+    * `-v /your/path/to/config:/app/config`: **（必需）** 持久化您的 `config.json` 和 `.env` 文件。
+    * `-v /your/path/to/uploads:/app/public/uploads`: **（必需）** 持久化您上传的自定义图标和背景图。
+    * `-v /proc:/proc:ro`: **（必需）** 以只读方式挂载宿主的 `/proc` 目录，用于获取 CPU、内存等实时信息。
+    * `-v /sys:/sys:ro`: **（必需）** 以只读方式挂载宿主的 `/sys` 目录，用于获取 CPU 温度、风扇等硬件信息。
+    * `-v /etc/os-release:/etc/os-release:ro`: **（必需）** 挂载宿主系统信息文件。
     * `--restart always`: 确保 Docker 服务或您的 NAS 重启后，iPanel 能自动恢复运行。
 
 4.  **开始使用**

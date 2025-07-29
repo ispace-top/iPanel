@@ -4,7 +4,6 @@
   <img src="https://img.shields.io/github/v/release/ispace-top/iPanel?style=for-the-badge&logo=github" alt="最新版本">
   <img src="https://img.shields.io/docker/pulls/wapedkj/ipanel?style=for-the-badge&logo=docker" alt="Docker Pulls">
   <img src="https://img.shields.io/github/actions/workflow/status/ispace-top/iPanel/docker-publish.yml?style=for-the-badge&logo=githubactions" alt="构建状态">
-  <img src="https://img.shields.io/github/license/ispace-top/iPanel?style=for-the-badge" alt="许可证">
 </p>
 
 <p align="center">

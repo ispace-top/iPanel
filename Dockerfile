@@ -1,6 +1,6 @@
 # --- Stage 1: Build ---
-# 使用一个兼容性更好的 Node slim image 来构建应用
-FROM node:20-slim AS builder
+# 使用兼容性最强的 Node bookworm (Debian 12) 镜像来构建应用
+FROM node:20-bookworm AS builder
 
 WORKDIR /app
 
@@ -17,8 +17,8 @@ COPY . .
 RUN npm run build
 
 # --- Stage 2: Production ---
-# 同样使用 slim image 来运行应用
-FROM node:20-slim
+# 同样使用 bookworm 镜像来运行应用
+FROM node:20-bookworm
 
 WORKDIR /app
 

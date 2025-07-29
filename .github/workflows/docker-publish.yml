@@ -43,6 +43,10 @@ jobs:
           # 将镜像名称修改为您的 Docker Hub 用户名 / ipanel
           images: ${{ secrets.DOCKER_USERNAME }}/ipanel
 
+      # 新增步骤：为 Docker 构建创建一个空的配置文件
+      - name: Create empty config.json for build
+        run: echo "{}" > config.json
+
       # 构建并推送多平台 Docker 镜像
       - name: Build and push multi-platform Docker image
         uses: docker/build-push-action@v5

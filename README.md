@@ -1,10 +1,10 @@
 # iPanel - 您的专属 NAS 导航和监控面板
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/YOUR_USERNAME/YOUR_REPO?style=for-the-badge&logo=github" alt="最新版本">
-  <img src="https://img.shields.io/docker/pulls/YOUR_DOCKER_USERNAME/ipanel?style=for-the-badge&logo=docker" alt="Docker Pulls">
-  <img src="https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/YOUR_REPO/docker-publish.yml?style=for-the-badge&logo=githubactions" alt="构建状态">
-  <img src="https://img.shields.io/github/license/YOUR_USERNAME/YOUR_REPO?style=for-the-badge" alt="许可证">
+  <img src="https://img.shields.io/github/v/release/ispace-top/iPanel?style=for-the-badge&logo=github" alt="最新版本">
+  <img src="https://img.shields.io/docker/pulls/wapedkj/ipanel?style=for-the-badge&logo=docker" alt="Docker Pulls">
+  <img src="https://img.shields.io/github/actions/workflow/status/ispace-top/iPanel/docker-publish.yml?style=for-the-badge&logo=githubactions" alt="构建状态">
+  <img src="https://img.shields.io/github/license/ispace-top/iPanel?style=for-the-badge" alt="许可证">
 </p>
 
 <p align="center">
@@ -15,7 +15,7 @@
 
 ## ✨ 界面预览
 
-[您的 iPanel 界面的截图]
+[界面](./img/view.png)
 
 ## 🚀 主要功能
 
@@ -47,7 +47,7 @@
 
     从 Docker Hub 拉取最新的 iPanel 镜像：
     ```bash
-    docker pull YOUR_DOCKER_USERNAME/ipanel:latest
+    docker pull wapedkj/ipanel:latest
     ```
 
 2.  **准备配置文件**
@@ -76,7 +76,7 @@
       -v /sys:/sys:ro \
       -v /etc/os-release:/etc/os-release:ro \
       --restart always \
-      YOUR_DOCKER_USERNAME/ipanel:latest
+      wapedkj/ipanel:latest
     ```
 
     **参数说明:**
@@ -98,7 +98,7 @@
 
 1.  克隆本仓库：
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/YOUR_REPO.git](https://github.com/YOUR_USERNAME/YOUR_REPO.git)
+    git clone [https://github.com/ispace-top/iPanel.git](https://github.com/ispace-top/iPanel.git)
     cd YOUR_REPO
     ```
 2.  安装依赖：
@@ -117,9 +117,9 @@
 
 我们欢迎任何形式的贡献！无论是提交 Bug 报告、提出功能建议还是直接贡献代码，都对这个项目非常有帮助。
 
-* **提交 Issue**: 如果您发现了 Bug 或有好的想法，请在 [Issues](https://github.com/YOUR_USERNAME/YOUR_REPO/issues) 页面提交。
+* **提交 Issue**: 如果您发现了 Bug 或有好的想法，请在 [Issues](https://github.com/ispace-top/iPanel/issues) 页面提交。
 * **Pull Request**: 如果您想贡献代码，请先 Fork 本仓库，在您自己的分支上进行修改，然后提交 Pull Request。
 
 ## 📜 许可证
 
-本项目基于 [MIT License](https://github.com/YOUR_USERNAME/YOUR_REPO/blob/main/LICENSE) 开源。
+本项目基于 [MIT License](https://github.com/ispace-top/iPanel/blob/main/LICENSE) 开源。

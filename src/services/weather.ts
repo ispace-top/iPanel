@@ -21,7 +21,7 @@ async function getLocationId(cityName: string, apiKey: string): Promise<string |
 
 // Main function to get weather data
 export async function getWeather(cityName: string) {
-    const apiKey = process.env.HEWEATHER_KEY||'c72cea469bb14f8d87135353fb548c6e';
+    const apiKey = process.env.HEWEATHER_KEY; // Ensure you have your API key set in .env file
     if (!apiKey) {
         throw new Error('HeWeather API key not configured in .env file.');
     }

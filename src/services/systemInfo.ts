@@ -9,8 +9,9 @@ export async function getSystemInfo() {
             // Try to get fan data, skip if not supported to avoid crashing
             // Cast 'si' to 'any' to bypass the strict type check for the 'fans' method
             fansData = await (si as any).fans();
-        } catch (fanError) {
-            console.warn("无法获取风扇转速数据，您的系统可能不支持此功能。(Could not get fan speed data, your system may not support this feature.)", fanError);
+            // oxlint-disable-next-line no-unused-vars
+        } catch (error) {
+            console.warn("无法获取风扇转速数据，您的系统可能不支持此功能。(Could not get fan speed data, your system may not support this feature.)");
         }
 
         // 并行获取所有其他数据以提高性能

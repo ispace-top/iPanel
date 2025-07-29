@@ -3,22 +3,22 @@
     {
       "name": "Docker",
       "url": "https://docker.itjl.top:91",
-      "icon": "/uploads/1753762911766-docker.png"
+      "icon": "prebuilt:docker"
     },
     {
       "name": "File Browser",
       "url": "https://file.itjl.top:91",
-      "icon": "/uploads/1753762911766-file-browser.png"
+      "icon": "prebuilt:storage"
     },
     {
       "name": "WebDAV",
       "url": "https://webdav.itjl.top:91",
-      "icon": "/uploads/1753762911766-webdav.png"
+      "icon": "prebuilt:filebrowser"
     },
     {
       "name": "NAS Dashboard",
       "url": "/dashboard",
-      "icon": "/uploads/1753762911766-dashboard.png"
+      "icon": "prebuilt:truenas"
     }
   ],
   "weather": {
@@ -30,5 +30,10 @@
   "background": {
     "type": "bing",
     "value": ""
+  },
+  "passwordHash": "30c09551586f07395235e960743fa35ad90256326cbaf1b69a8f4f43cd900a96",
+  "search": {
+    "engines": [],
+    "defaultEngine": ""
   }
 }

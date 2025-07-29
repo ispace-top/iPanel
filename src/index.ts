@@ -1,154 +1,173 @@
+import dotenv from 'dotenv';
+// Load environment variables from .env file at the very beginning
+dotenv.config();
+
 import express, { Request, Response, RequestHandler } from 'express';
-import cors from 'cors';
 import path from 'path';
-import fs from 'fs/promises';
+import crypto from 'crypto';
 import multer from 'multer';
-import axios from 'axios'; // 新增 axios 依赖
+import { readConfig, saveConfig } from './services/config';
 import { getSystemInfo } from './services/systemInfo';
 import { getWeather } from './services/weather';
-import { getConfig, saveConfig } from './services/config';
+import { getBingWallpaper } from './services/wallpaper';
 
 const app = express();
-const port = 3000;
+// Ensure PORT is a number to satisfy app.listen's type signature
+const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// --- 中间件 ---
-app.use(cors());
 app.use(express.json());
-// 将 'public' 目录设置为静态文件服务的根目录
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(process.cwd(), 'public')));
 
-// --- Multer 存储配置 ---
+// --- Hashing Utility ---
+const hashPassword = (password: string): string => {
+    return crypto.createHash('sha256').update(password).digest('hex');
+};
 
-// 1. 图标存储配置
-const iconStorage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '..', 'public', 'uploads');
-    try {
-      await fs.mkdir(uploadPath, { recursive: true });
-      cb(null, uploadPath);
-    } catch (error) {
-      console.error('Failed to create icon upload directory:', error);
-      // cb(error as Error, ''); 
-    }
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
-
-// 2. 背景图片存储配置
-const backgroundStorage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-        const uploadPath = path.join(__dirname, '..', 'public', 'uploads', 'backgrounds');
-         try {
-            await fs.mkdir(uploadPath, { recursive: true });
-            cb(null, uploadPath);
-        } catch (error) {
-            console.error('Failed to create background upload directory:', error);
-            // cb(error as Error, '');
-        }
+// --- Multer Storage Configuration ---
+const createStorage = (destination: string) => multer.diskStorage({
+    destination: (req, file, cb) => {
+        const destPath = path.join(process.cwd(), 'public', destination);
+        // This is a simple synchronous way to ensure the directory exists.
+        // For more complex applications, using async fs operations from fs/promises would be better.
+        require('fs').mkdirSync(destPath, { recursive: true });
+        cb(null, destPath);
     },
     filename: (req, file, cb) => {
-        cb(null, `bg-${Date.now()}-${file.originalname}`);
-    },
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
 });
 
-const uploadIcon = multer({ storage: iconStorage });
-const uploadBackground = multer({ storage: backgroundStorage });
-
+const uploadIcon = multer({ storage: createStorage('uploads/icons') });
+const uploadBackground = multer({ storage: createStorage('uploads/backgrounds') });
 
 // --- API Endpoints ---
 
-// GET /api/config - 获取当前配置
-app.get('/api/config', async (req, res) => {
-  try {
-    const config = await getConfig();
-    res.json(config);
-  } catch (error) {
-    console.error('Error fetching config:', error);
-    res.status(500).json({ message: 'Failed to read configuration.' });
-  }
+// GET /api/system
+app.get('/api/system', async (req: Request, res: Response) => {
+    try {
+        const info = await getSystemInfo();
+        res.json(info);
+    } catch (error) {
+        console.error("Error fetching system info:", error);
+        res.status(500).json({ error: 'Failed to fetch system info' });
+    }
 });
 
-// POST /api/config - 保存新配置
-app.post('/api/config', async (req, res) => {
-  try {
-    await saveConfig(req.body);
-    res.status(200).json({ message: 'Configuration saved successfully.' });
-  } catch (error) {
-    console.error('Error saving config:', error);
-    res.status(500).json({ message: 'Failed to save configuration.' });
-  }
+// GET /api/weather
+app.get('/api/weather', async (req: Request, res: Response) => {
+    const city = req.query.city as string;
+    if (!city) {
+        return res.status(400).json({ error: 'City is required' });
+    }
+    try {
+        const weatherData = await getWeather(city);
+        res.json(weatherData);
+    } catch (error) {
+        res.status(500).json({ error: `Failed to fetch weather for ${city}` });
+    }
 });
 
-// GET /api/system - 获取实时系统信息
-app.get('/api/system', async (req, res) => {
-  try {
-    const systemInfo = await getSystemInfo();
-    res.json(systemInfo);
-  } catch (error) {
-    console.error('Error fetching system info:', error);
-    res.status(500).json({ message: 'Failed to get system information.' });
-  }
-});
-
-// GET /api/weather - 获取天气信息
-app.get('/api/weather', async (req, res) => {
-  const city = req.query.city as string;
-  if (!city) {
-    return res.status(400).json({ message: 'City is required' });
-  }
-  try {
-    const weatherData = await getWeather(city);
-    res.json(weatherData);
-  } catch (error: any) {
-    console.error(`Error fetching weather for ${city}:`, error);
-    res.status(error.response?.status || 500).json({ message: `Failed to get weather for ${city}` });
-  }
-});
-
-// NEW: GET /api/bing-wallpaper - 获取必应每日壁纸
+// GET /api/bing-wallpaper
 app.get('/api/bing-wallpaper', async (req, res) => {
     try {
-        const response = await axios.get('https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN');
-        if (response.data && response.data.images && response.data.images.length > 0) {
-            const imageUrl = `https://www.bing.com${response.data.images[0].url}`;
-            res.json({ url: imageUrl });
+        const wallpaper = await getBingWallpaper();
+        res.json(wallpaper);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch Bing wallpaper' });
+    }
+});
+
+// GET /api/config
+// Reads the configuration and sends it to the client,
+// omitting the password hash for security.
+app.get('/api/config', async (req, res) => {
+    try {
+        const config = await readConfig();
+        res.json({
+            ...config,
+            passwordHash: undefined, // Never send the hash to the client
+            hasPassword: !!config.passwordHash,
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to read config' });
+    }
+});
+
+// POST /api/verify-password
+// Verifies a given password against the stored hash.
+app.post('/api/verify-password', async (req, res) => {
+    const { password } = req.body;
+    if (!password) {
+        return res.status(400).json({ success: false, message: 'Password required' });
+    }
+    try {
+        const config = await readConfig();
+        // If no password is set, any attempt is "successful" to allow setting one for the first time.
+        if (!config.passwordHash) {
+            return res.json({ success: true });
+        }
+        const inputHash = hashPassword(password);
+        if (inputHash === config.passwordHash) {
+            res.json({ success: true });
         } else {
-            throw new Error('Bing API did not return any images.');
+            res.json({ success: false, message: 'Incorrect password' });
         }
     } catch (error) {
-        console.error('Failed to fetch Bing wallpaper:', error);
-        res.status(500).json({ message: 'Failed to fetch Bing wallpaper.' });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
-// POST /api/upload/icon - 处理图标上传
+// POST /api/config
+// Saves the new configuration from the client.
+app.post('/api/config', async (req, res) => {
+    try {
+        const newConfigData = req.body;
+        const currentConfig = await readConfig();
+
+        // Handle password update
+        if (newConfigData.password) {
+            if (typeof newConfigData.password === 'string' && newConfigData.password.length > 0) {
+                 currentConfig.passwordHash = hashPassword(newConfigData.password);
+            }
+        }
+        
+        // Update other configuration parts
+        currentConfig.navItems = newConfigData.navItems;
+        currentConfig.weather = newConfigData.weather;
+        currentConfig.background = newConfigData.background;
+        currentConfig.search = newConfigData.search;
+
+        await saveConfig(currentConfig);
+        res.status(200).json({ message: 'Config saved successfully' });
+    } catch (error) {
+        console.error("Error saving config:", error);
+        res.status(500).json({ error: 'Failed to save config' });
+    }
+});
+
+
+// Using type assertion `as unknown as RequestHandler` to bypass the stubborn type conflict
+// between the express versions used by multer and the main project.
 app.post('/api/upload/icon', uploadIcon.single('icon') as unknown as RequestHandler, (req: Request, res: Response) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded.' });
+    if (req.file) {
+        const filePath = `/uploads/icons/${req.file.filename}`;
+        res.json({ filePath });
+    } else {
+        res.status(400).send('No file uploaded.');
     }
-    const filePath = `/uploads/${req.file.filename}`;
-    res.json({ filePath });
 });
 
-// POST /api/upload/background - 处理背景图片上传
 app.post('/api/upload/background', uploadBackground.single('background') as unknown as RequestHandler, (req: Request, res: Response) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded.' });
+    if (req.file) {
+        const filePath = `/uploads/backgrounds/${req.file.filename}`;
+        res.json({ filePath });
+    } else {
+        res.status(400).send('No file uploaded.');
     }
-    const filePath = `/uploads/backgrounds/${req.file.filename}`;
-    res.json({ filePath });
 });
 
 
-// --- 根路由和服务器启动 ---
-
-// 将所有未匹配的 GET 请求重定向到 index.html
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Server is running at http://localhost:${port}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });

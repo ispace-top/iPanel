@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const systemInfoContent = getElem('system-info-content');
     const weatherContent = getElem('weather-content');
     const settingsBtn = getElem('settings-btn');
+    const searchBarContainer = getElem('search-bar-container');
 
     // Search Bar
     const engineSelectBtn = getElem('engine-select-btn');
@@ -47,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Password Modal
     const passwordModal = getElem('password-modal');
+    const closePasswordModalBtn = getElem('close-password-modal-btn'); 
     const passwordInput = getElem('password-input');
     const passwordError = getElem('password-error');
     const passwordSubmitBtn = getElem('password-submit-btn');
@@ -81,6 +83,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATE ---
     let currentConfig = {};
     let activeIconForm = null;
+    
+    // --- DYNAMIC COLOR HELPERS ---
+    const getColorForPercentage = (percentage) => {
+        if (percentage >= 80) return 'text-red-400';
+        if (percentage >= 50) return 'text-yellow-400';
+        return 'text-green-400';
+    };
+
+    const getColorForCpuTemp = (temp) => {
+        if (temp >= 80) return 'text-red-400';
+        if (temp >= 60) return 'text-yellow-400';
+        if (temp >= 40) return 'text-green-400';
+        return 'text-cyan-400';
+    };
+
+    const getColorForWeatherTemp = (temp) => {
+        const numericTemp = parseFloat(temp);
+        if (numericTemp >= 30) return 'text-yellow-400';
+        if (numericTemp >= 20) return 'text-green-400';
+        if (numericTemp >= 10) return 'text-cyan-400';
+        return 'text-blue-400';
+    };
+
 
     // --- MAIN FUNCTIONS ---
     async function fetchConfigAndRender() {
@@ -90,8 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const config = await response.json();
             currentConfig = config;
             
-            // Use nullish coalescing operator to correctly handle empty strings
-            document.title = config.siteTitle ?? 'NAS 控制台';
+            document.title = config.siteTitle || 'NAS 控制台';
             
             await applyBackground(config.background);
             renderNavItems(config.navItems || []);
@@ -154,16 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
             div.target = "_blank";
             div.className = "icon-item flex flex-col items-center justify-center p-4 rounded-xl bg-white/10 backdrop-blur-md shadow-lg aspect-square";
             
-            let iconHtml = '';
-            if (item.icon?.startsWith('prebuilt:')) {
-                const iconId = item.icon.replace('prebuilt:', '');
-                const prebuiltIcon = PREBUILT_ICONS[iconId];
-                iconHtml = prebuiltIcon ? `<div class="w-12 h-12 mb-2 text-white">${prebuiltIcon.svg}</div>` : `<i data-lucide="globe" class="w-12 h-12 mb-2"></i>`;
-            } else if (item.icon?.startsWith('/uploads/')) {
-                iconHtml = `<img src="${item.icon}" class="w-12 h-12 mb-2 object-contain" alt="${item.name}">`;
-            } else {
-                iconHtml = `<i data-lucide="${item.icon || 'globe'}" class="w-12 h-12 mb-2"></i>`;
-            }
+            let iconHtml = getIconHtml(item.icon, 'w-12 h-12 mb-2');
 
             div.innerHTML = `${iconHtml}<span class="font-semibold text-center text-sm break-all">${item.name}</span>`;
             navContainer.appendChild(div);
@@ -187,13 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
             };
             
-            const cpuTempHtml = data.cpu.temperature ? `<div class="flex justify-between"><span>温度:</span><span class="font-mono">${data.cpu.temperature}°C</span></div>` : '';
+            const cpuTempHtml = data.cpu.temperature ? `<div class="flex justify-between"><span>温度:</span><span class="font-mono ${getColorForCpuTemp(data.cpu.temperature)}">${data.cpu.temperature}°C</span></div>` : '';
             const cpuFanHtml = data.cpu.fanSpeed ? `<div class="flex justify-between"><span>风扇转速:</span><span class="font-mono">${data.cpu.fanSpeed} RPM</span></div>` : '';
             const cpuHtml = `
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">CPU</h4>
                     <div class="space-y-1 text-xs pl-2">
-                        <div class="flex justify-between"><span>使用率:</span><span class="font-mono">${(data.cpu.load || 0).toFixed(2)}%</span></div>
+                        <div class="flex justify-between"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>
                         ${cpuTempHtml}
                         ${cpuFanHtml}
                         <div class="flex justify-between"><span>核心数:</span><span class="font-mono">${data.cpu.cores}</span></div>
@@ -204,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">内存</h4>
                     <div class="space-y-1 text-xs pl-2">
-                        <div class="flex justify-between items-center mb-1"><span>使用率:</span><span class="font-mono">${(data.mem.usage || 0).toFixed(2)}%</span></div>
+                        <div class="flex justify-between items-center mb-1"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.mem.usage)}">${(data.mem.usage || 0).toFixed(2)}%</span></div>
                         <div class="w-full bg-slate-700/50 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${(data.mem.usage || 0).toFixed(2)}%"></div></div>
                         <div class="text-right text-slate-400 font-mono text-[10px]">${formatBytes(data.mem.used)} / ${formatBytes(data.mem.total)}</div>
                     </div>
@@ -222,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>`;
 
-            const diskRows = (data.fs || []).map(d => `<tr class="border-b border-white/10 last:border-none"><td class="py-1 pr-2 truncate" title="${d.fs}">${d.fs}</td><td class="py-1 px-2 text-right font-mono whitespace-nowrap text-[11px]">${formatBytes(d.used)}|${formatBytes(d.size)}</td><td class="py-1 pl-2 text-right font-mono whitespace-nowrap">${(d.use || 0).toFixed(1)}%</td></tr>`).join('');
+            const diskRows = (data.fs || []).map(d => `<tr class="border-b border-white/10 last:border-none"><td class="py-1 pr-2 truncate" title="${d.fs}">${d.fs}</td><td class="py-1 px-2 text-right font-mono whitespace-nowrap text-[11px]">${formatBytes(d.used)}|${formatBytes(d.size)}</td><td class="py-1 pl-2 text-right font-mono whitespace-nowrap ${getColorForPercentage(d.use || 0)}">${(d.use || 0).toFixed(1)}%</td></tr>`).join('');
             const diskHtml = `
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">磁盘</h4>
@@ -258,11 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     hasSuccess = true;
                     const data = result.value;
                     const forecastData = (index === 0) ? data.forecast.slice(0, 2) : data.forecast;
-                    const forecastRows = forecastData.map(day => `<tr class="border-b border-white/10 last:border-none"><td class="py-1">${day.date}</td><td class="py-1 text-center"><img src="${day.icon}" class="w-6 h-6 inline-block mx-auto" alt="${day.description}"></td><td class="py-1 text-center">${day.description}</td><td class="py-1 text-right font-mono">${day.temp}°</td></tr>`).join('');
+                    const forecastRows = forecastData.map(day => `<tr class="border-b border-white/10 last:border-none"><td class="py-1">${day.date}</td><td class="py-1 text-center"><img src="${day.icon}" class="w-6 h-6 inline-block mx-auto" alt="${day.description}"></td><td class="py-1 text-center">${day.description}</td><td class="py-1 text-right font-mono">${day.temp}</td></tr>`).join('');
                     
                     if (index === 0) {
                         cityWeatherContainer.innerHTML = `
-                            <div class="text-center mb-4"><h4 class="font-bold text-xl text-slate-50">${data.city}</h4><div class="flex items-center justify-center gap-2 mt-1"><img src="${data.now.icon}" class="w-16 h-16 -ml-4" alt="${data.now.text}"><span class="text-5xl font-light text-slate-50">${data.now.temp}°</span></div><p class="text-slate-200 text-sm mt-1">${data.now.text}</p></div>
+                            <div class="text-center mb-4"><h4 class="font-bold text-xl text-slate-50">${data.city}</h4><div class="flex items-center justify-center gap-2 mt-1"><img src="${data.now.icon}" class="w-16 h-16 -ml-4" alt="${data.now.text}"><span class="text-5xl font-light ${getColorForWeatherTemp(data.now.temp)}">${data.now.temp}°</span></div><p class="text-slate-200 text-sm mt-1">${data.now.text}</p></div>
                             <hr class="border-white/10 my-3">
                             <div><h4 class="font-bold text-slate-100 mb-1">未来预报</h4><div class="pl-2 text-xs"><table class="w-full"><tbody>${forecastRows}</tbody></table></div></div>`;
                     } else {
@@ -286,7 +301,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const { engines, defaultEngine } = searchConfig;
         
-        // Populate dropdown
         engineDropdown.innerHTML = engines.map(engine => `
             <button data-engine="${engine.name}" class="search-engine-option w-full text-left px-4 py-2 text-sm hover:bg-white/20 flex items-center gap-2">
                 <span class="w-5 h-5">${engine.icon}</span>
@@ -294,7 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         `).join('');
 
-        // Set default engine
         const defaultEngineData = engines.find(e => e.name === defaultEngine) || engines[0];
         if (defaultEngineData) {
             engineSelectBtn.innerHTML = `<span class="w-6 h-6">${defaultEngineData.icon}</span>`;
@@ -317,24 +330,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- PASSWORD & SETTINGS MODAL LOGIC ---
     function populateSettingsModal(config) {
-        // Use nullish coalescing operator to correctly handle empty strings
-        siteTitleInput.value = config.siteTitle ?? 'NAS 控制台';
+        siteTitleInput.value = config.siteTitle || 'NAS 控制台';
         
-        // Nav Items
         navSettingsContainer.innerHTML = '';
         (config.navItems || []).forEach(item => addNavItemForm(item));
 
-        // Weather Cities
         weatherSettingsContainer.innerHTML = '';
         (config.weather?.cities || []).forEach(city => addWeatherCityForm(city));
         
-        // Search Engines
         searchSettingsContainer.innerHTML = '';
         (config.search?.engines || []).forEach(engine => {
             if(engine.custom) addSearchEngineForm(engine);
         });
         
-        // Background
         const bgConfig = config.background || { type: 'bing', value: '' };
         const radio = backgroundSettingsContainer.querySelector(`input[name="bg-type"][value="${bgConfig.type}"]`);
         if (radio) radio.checked = true;
@@ -377,10 +385,15 @@ document.addEventListener('DOMContentLoaded', () => {
          const div = document.createElement('div');
         div.className = 'p-2 bg-white/10 rounded-lg flex items-center gap-2';
         div.innerHTML = `
-            <input type="text" placeholder="引擎名称" value="${engine.name}" class="search-engine-name bg-transparent border-b border-white/30 p-1 w-1/4 focus:outline-none focus:border-white placeholder:text-slate-400">
-            <input type="text" placeholder="URL (用 %s 占位)" value="${engine.url}" class="search-engine-url bg-transparent border-b border-white/30 p-1 flex-grow focus:outline-none focus:border-white placeholder:text-slate-400">
-            <input type="text" placeholder="图标SVG代码" value="${engine.icon}" class="search-engine-icon bg-transparent border-b border-white/30 p-1 w-1/4 focus:outline-none focus:border-white placeholder:text-slate-400">
-            <button class="remove-btn p-1 rounded-full hover:bg-white/20 text-red-400" title="删除此引擎"><i data-lucide="trash-2"></i></button>`;
+            <div class="flex items-center gap-2 flex-grow">
+                <input type="text" placeholder="引擎名称" value="${engine.name}" class="search-engine-name bg-transparent border-b border-white/30 p-1 w-1/3 focus:outline-none focus:border-white placeholder:text-slate-400">
+                <input type="text" placeholder="URL (用 %s 占位)" value="${engine.url}" class="search-engine-url bg-transparent border-b border-white/30 p-1 w-2/3 focus:outline-none focus:border-white placeholder:text-slate-400">
+            </div>
+             <div class="flex items-center gap-2 flex-grow-[2]">
+                <textarea placeholder="图标SVG代码" class="search-engine-icon bg-transparent border-b border-white/30 p-1 w-full h-8 resize-none focus:outline-none focus:border-white placeholder:text-slate-400">${engine.icon}</textarea>
+                <button class="remove-btn p-1 rounded-full hover:bg-white/20 text-red-400" title="删除此引擎"><i data-lucide="trash-2"></i></button>
+            </div>
+            `;
         searchSettingsContainer.appendChild(div);
         lucide.createIcons();
     }
@@ -410,8 +423,12 @@ document.addEventListener('DOMContentLoaded', () => {
             icon: div.querySelector('.search-engine-icon').value,
             custom: true
         }));
+
+        // Keep the default engines from the current config and add the new custom ones
+        const defaultEngines = currentConfig.search.engines.filter(e => !e.custom);
+        
         const search = {
-            engines: customEngines,
+            engines: [...defaultEngines, ...customEngines],
             defaultEngine: currentConfig.search?.defaultEngine
         };
 
@@ -484,12 +501,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT LISTENERS ---
+    const closePasswordModal = () => {
+        passwordModal.classList.add('hidden');
+        passwordInput.value = '';
+        passwordError.classList.add('hidden');
+    };
+
     settingsBtn.addEventListener('click', async () => {
-        if (currentConfig.hasPassword) {
-            passwordModal.classList.remove('hidden');
-            passwordInput.focus();
-        } else {
-            settingsModal.classList.remove('hidden');
+        try {
+            const response = await fetch('/api/config');
+            const config = await response.json();
+            currentConfig = config; // Refresh config before opening
+            if (config.hasPassword) {
+                passwordModal.classList.remove('hidden');
+                passwordInput.focus();
+            } else {
+                settingsModal.classList.remove('hidden');
+            }
+        } catch (error) {
+            alert('无法获取配置，请刷新页面重试。');
+        }
+    });
+
+    closePasswordModalBtn.addEventListener('click', closePasswordModal);
+    passwordModal.addEventListener('click', (e) => {
+        if (e.target === passwordModal) {
+            closePasswordModal();
         }
     });
 
@@ -500,12 +537,19 @@ document.addEventListener('DOMContentLoaded', () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: passwordInput.value })
         });
+
+        if (!response.ok) {
+            passwordError.textContent = '服务器错误，请稍后重试。';
+            passwordError.classList.remove('hidden');
+            return;
+        }
+
         const result = await response.json();
         if (result.success) {
-            passwordModal.classList.add('hidden');
+            closePasswordModal();
             settingsModal.classList.remove('hidden');
-            passwordInput.value = '';
         } else {
+            passwordError.textContent = '密码错误！';
             passwordError.classList.remove('hidden');
         }
     });
@@ -522,7 +566,6 @@ document.addEventListener('DOMContentLoaded', () => {
     bgUploadBtn.addEventListener('click', () => bgUploadInput.click());
     backgroundSettingsContainer.addEventListener('change', updateBgSettingsVisibility);
 
-    // Event delegation for dynamically added elements
     settingsModal.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.remove-btn');
         if (removeBtn) removeBtn.parentElement.remove();
@@ -540,10 +583,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pickerItem) selectIcon(pickerItem.dataset.iconId);
     });
 
-    // Search events
     engineSelectBtn.addEventListener('click', () => engineDropdown.classList.toggle('hidden'));
     document.addEventListener('click', (e) => {
-        if (!engineSelectBtn.contains(e.target) && !engineDropdown.contains(e.target)) {
+        if (!searchBarContainer.contains(e.target)) {
             engineDropdown.classList.add('hidden');
         }
     });
@@ -555,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(engineData) {
                 engineSelectBtn.innerHTML = `<span class="w-6 h-6">${engineData.icon}</span>`;
                 engineSelectBtn.dataset.activeEngine = engineName;
-                currentConfig.search.defaultEngine = engineName; // Update state for saving
+                currentConfig.search.defaultEngine = engineName;
             }
             engineDropdown.classList.add('hidden');
         }

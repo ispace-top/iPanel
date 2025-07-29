@@ -1,9 +1,23 @@
 import dotenv from 'dotenv';
-// Load environment variables from .env file at the very beginning
-dotenv.config();
+import path from 'path';
+
+// --- 诊断并加载 .env 文件的最终方案 ---
+// --- Final solution to diagnose and load the .env file ---
+const envPath = path.resolve(__dirname, '../.env');
+console.log(`[DEBUG] 正在尝试从以下路径加载 .env 文件: ${envPath}`);
+
+const dotEnvResult = dotenv.config({ path: envPath });
+
+if (dotEnvResult.error) {
+    console.error('[DEBUG] 加载 .env 文件失败:', dotEnvResult.error);
+} else {
+    console.log('[DEBUG] .env 文件加载成功。');
+    // 确认 HEWEATHER_KEY 是否真的被加载
+    console.log(`[DEBUG] 是否找到 HEWEATHER_KEY: ${!!process.env.HEWEATHER_KEY}`);
+}
+// --- 诊断结束 ---
 
 import express, { Request, Response, RequestHandler } from 'express';
-import path from 'path';
 import crypto from 'crypto';
 import multer from 'multer';
 import { readConfig, saveConfig } from './services/config';
@@ -12,11 +26,11 @@ import { getWeather } from './services/weather';
 import { getBingWallpaper } from './services/wallpaper';
 
 const app = express();
-// Ensure PORT is a number to satisfy app.listen's type signature
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json());
-app.use(express.static(path.join(process.cwd(), 'public')));
+// 使用 __dirname 来确保静态文件路径的正确性
+app.use(express.static(path.join(__dirname, '../public')));
 
 // --- Hashing Utility ---
 const hashPassword = (password: string): string => {
@@ -26,9 +40,7 @@ const hashPassword = (password: string): string => {
 // --- Multer Storage Configuration ---
 const createStorage = (destination: string) => multer.diskStorage({
     destination: (req, file, cb) => {
-        const destPath = path.join(process.cwd(), 'public', destination);
-        // This is a simple synchronous way to ensure the directory exists.
-        // For more complex applications, using async fs operations from fs/promises would be better.
+        const destPath = path.join(__dirname, '../public', destination);
         require('fs').mkdirSync(destPath, { recursive: true });
         cb(null, destPath);
     },
@@ -42,8 +54,6 @@ const uploadIcon = multer({ storage: createStorage('uploads/icons') });
 const uploadBackground = multer({ storage: createStorage('uploads/backgrounds') });
 
 // --- API Endpoints ---
-
-// GET /api/system
 app.get('/api/system', async (req: Request, res: Response) => {
     try {
         const info = await getSystemInfo();
@@ -54,7 +64,6 @@ app.get('/api/system', async (req: Request, res: Response) => {
     }
 });
 
-// GET /api/weather
 app.get('/api/weather', async (req: Request, res: Response) => {
     const city = req.query.city as string;
     if (!city) {
@@ -68,7 +77,6 @@ app.get('/api/weather', async (req: Request, res: Response) => {
     }
 });
 
-// GET /api/bing-wallpaper
 app.get('/api/bing-wallpaper', async (req, res) => {
     try {
         const wallpaper = await getBingWallpaper();
@@ -78,15 +86,12 @@ app.get('/api/bing-wallpaper', async (req, res) => {
     }
 });
 
-// GET /api/config
-// Reads the configuration and sends it to the client,
-// omitting the password hash for security.
 app.get('/api/config', async (req, res) => {
     try {
         const config = await readConfig();
         res.json({
             ...config,
-            passwordHash: undefined, // Never send the hash to the client
+            passwordHash: undefined,
             hasPassword: !!config.passwordHash,
         });
     } catch (error) {
@@ -94,8 +99,6 @@ app.get('/api/config', async (req, res) => {
     }
 });
 
-// POST /api/verify-password
-// Verifies a given password against the stored hash.
 app.post('/api/verify-password', async (req, res) => {
     const { password } = req.body;
     if (!password) {
@@ -103,7 +106,6 @@ app.post('/api/verify-password', async (req, res) => {
     }
     try {
         const config = await readConfig();
-        // If no password is set, any attempt is "successful" to allow setting one for the first time.
         if (!config.passwordHash) {
             return res.json({ success: true });
         }
@@ -118,21 +120,18 @@ app.post('/api/verify-password', async (req, res) => {
     }
 });
 
-// POST /api/config
-// Saves the new configuration from the client.
 app.post('/api/config', async (req, res) => {
     try {
         const newConfigData = req.body;
         const currentConfig = await readConfig();
 
-        // Handle password update
         if (newConfigData.password) {
             if (typeof newConfigData.password === 'string' && newConfigData.password.length > 0) {
                  currentConfig.passwordHash = hashPassword(newConfigData.password);
             }
         }
         
-        // Update other configuration parts
+        currentConfig.siteTitle = newConfigData.siteTitle;
         currentConfig.navItems = newConfigData.navItems;
         currentConfig.weather = newConfigData.weather;
         currentConfig.background = newConfigData.background;
@@ -146,13 +145,9 @@ app.post('/api/config', async (req, res) => {
     }
 });
 
-
-// Using type assertion `as unknown as RequestHandler` to bypass the stubborn type conflict
-// between the express versions used by multer and the main project.
 app.post('/api/upload/icon', uploadIcon.single('icon') as unknown as RequestHandler, (req: Request, res: Response) => {
     if (req.file) {
-        const filePath = `/uploads/icons/${req.file.filename}`;
-        res.json({ filePath });
+        res.json({ filePath: `/uploads/icons/${req.file.filename}` });
     } else {
         res.status(400).send('No file uploaded.');
     }
@@ -160,13 +155,11 @@ app.post('/api/upload/icon', uploadIcon.single('icon') as unknown as RequestHand
 
 app.post('/api/upload/background', uploadBackground.single('background') as unknown as RequestHandler, (req: Request, res: Response) => {
     if (req.file) {
-        const filePath = `/uploads/backgrounds/${req.file.filename}`;
-        res.json({ filePath });
+        res.json({ filePath: `/uploads/backgrounds/${req.file.filename}` });
     } else {
         res.status(400).send('No file uploaded.');
     }
 });
-
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on http://0.0.0.0:${PORT}`);

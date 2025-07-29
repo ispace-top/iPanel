@@ -1,7 +1,6 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config();
+// ** FIX: Removed dotenv import and config call from this file. **
+// This will now be handled globally by index.ts
 
 // Helper function to get location ID from city name
 async function getLocationId(cityName: string, apiKey: string): Promise<string | null> {
@@ -14,16 +13,23 @@ async function getLocationId(cityName: string, apiKey: string): Promise<string |
         console.warn(`Could not find location ID for city: ${cityName}`);
         return null;
     } catch (error) {
-        console.error(`Error getting location ID for ${cityName}:`, error);
+        if (axios.isAxiosError(error)) {
+            console.error(`Error getting location ID for ${cityName}:`, error.response?.data || error.message);
+        } else if (error instanceof Error) {
+            console.error(`Error getting location ID for ${cityName}:`, error.message);
+        } else {
+            console.error(`An unknown error occurred while getting location ID for ${cityName}:`, error);
+        }
         return null;
     }
 }
 
 // Main function to get weather data
 export async function getWeather(cityName: string) {
-    const apiKey = process.env.HEWEATHER_KEY; // Ensure you have your API key set in .env file
+    const apiKey = process.env.HEWEATHER_KEY;
     if (!apiKey) {
-        throw new Error('HeWeather API key not configured in .env file.');
+        console.error('HeWeather API key not configured. Make sure HEWEATHER_KEY is in your .env file.');
+        throw new Error('HeWeather API key not configured.');
     }
 
     try {
@@ -32,13 +38,11 @@ export async function getWeather(cityName: string) {
             throw new Error(`Could not find location ID for ${cityName}`);
         }
 
-        // Fetch both current weather and 3-day forecast in parallel
         const [nowResponse, forecastResponse] = await Promise.all([
             axios.get(`https://devapi.qweather.com/v7/weather/now?location=${locationId}&key=${apiKey}`),
             axios.get(`https://devapi.qweather.com/v7/weather/3d?location=${locationId}&key=${apiKey}`)
         ]);
 
-        // Check if both API calls were successful
         if (nowResponse.data.code !== '200' || forecastResponse.data.code !== '200') {
              throw new Error(`HeWeather API error. Now: ${nowResponse.data.code}, Forecast: ${forecastResponse.data.code}`);
         }
@@ -46,7 +50,6 @@ export async function getWeather(cityName: string) {
         const now = nowResponse.data.now;
         const forecast = forecastResponse.data.daily;
 
-        // Combine the results into a single object
         return {
             city: cityName,
             now: {
@@ -55,14 +58,20 @@ export async function getWeather(cityName: string) {
                 icon: `https://icons.qweather.com/assets/icons/${now.icon}.svg`
             },
             forecast: forecast.map((day: any) => ({
-                date: new Date(day.fxDate).toLocaleDateString('zh-CN', { weekday: 'short' }),
+                date: new Date(day.fxDate).toLocaleString('zh-CN', { weekday: 'short' }),
                 temp: `${day.tempMin}° / ${day.tempMax}°`,
                 description: day.textDay,
                 icon: `https://icons.qweather.com/assets/icons/${day.iconDay}.svg`
             }))
         };
     } catch (error) {
-        console.error(`Error fetching weather for ${cityName}:`, error);
-        throw error; // Re-throw the error to be caught by the route handler
+        if (axios.isAxiosError(error)) {
+            console.error(`Error fetching weather for ${cityName}:`, error.response?.data || error.message);
+        } else if (error instanceof Error) {
+            console.error(`Error fetching weather for ${cityName}:`, error.message);
+        } else {
+            console.error(`An unknown error occurred while fetching weather for ${cityName}:`, error);
+        }
+        throw error;
     }
 }

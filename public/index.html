@@ -10,10 +10,10 @@
 </head>
 <body class="text-slate-200">
 
-    <header class="fixed top-0 left-0 right-0 p-4 z-10 flex justify-center">
-        <div class="w-full max-w-2xl flex items-center justify-between gap-4">
-             <!-- 搜索栏 -->
-            <div id="search-bar-container" class="flex-grow flex items-center bg-white/10 backdrop-blur-md rounded-full shadow-lg h-12 px-2">
+    <header class="fixed top-0 left-0 right-0 p-4 z-10">
+        <div class="w-full max-w-screen-2xl mx-auto relative flex items-center justify-center">
+            <!-- 搜索栏 -->
+            <div id="search-bar-container" class="w-full max-w-2xl flex items-center bg-white/10 backdrop-blur-md rounded-full shadow-lg h-12 px-2">
                 <div class="relative h-full flex items-center">
                     <button id="engine-select-btn" class="flex items-center justify-center h-10 w-10 rounded-full hover:bg-white/20 transition-colors">
                         <!-- SVG将在JS中动态设置 -->
@@ -28,7 +28,7 @@
                 </button>
             </div>
             <!-- 设置按钮 -->
-            <button id="settings-btn" class="flex-shrink-0 backdrop-blur-md bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors shadow-lg">
+            <button id="settings-btn" class="absolute right-0 top-1/2 -translate-y-1/2 flex-shrink-0 backdrop-blur-md bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors shadow-lg">
                 <i data-lucide="settings"></i>
             </button>
         </div>
@@ -65,10 +65,11 @@
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-sm flex flex-col shadow-2xl text-slate-100">
              <div class="p-4 border-b border-white/20 flex justify-between items-center">
                 <h2 class="text-xl font-bold">需要验证</h2>
+                <button id="close-password-modal-btn" class="p-1 rounded-full hover:bg-white/20"><i data-lucide="x"></i></button>
             </div>
             <div class="p-4 space-y-4">
                 <p>请输入密码以继续。</p>
-                <input type="password" id="password-input" class="w-full bg-transparent border-b border-white/30 p-2 focus:outline-none focus:border-white placeholder:text-slate-400">
+                <input type="password" id="password-input" placeholder="输入密码" class="w-full bg-transparent border-b border-white/30 p-2 focus:outline-none focus:border-white placeholder:text-slate-400">
                 <p id="password-error" class="text-red-400 text-sm hidden">密码错误！</p>
             </div>
              <div class="p-4 border-t border-white/20 text-right">

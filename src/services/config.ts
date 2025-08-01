@@ -5,7 +5,7 @@ import path from 'path';
 interface Config {
     siteTitle?: string;
     navItems?: { name: string; url: string; icon: string }[];
-    weather?: { cities: string[] };
+    weather?: { cities: string[]; apiKey?: string };
     background?: { type: string; value: string };
     search?: {
         engines: { name: string; url: string; icon: string; custom?: boolean }[];

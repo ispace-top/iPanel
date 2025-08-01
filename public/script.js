@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.status === 'fulfilled' && result.value) {
                     hasSuccess = true;
                     const data = result.value;
-                    const forecastData = (index === 0) ? data.forecast.slice(0, 2) : data.forecast;
+                    const forecastData = (index === 0) ? data.forecast.slice(1, 3) : data.forecast;
                     const forecastRows = forecastData.map(day => `<tr class="border-b border-white/10 last:border-none"><td class="py-1">${day.date}</td><td class="py-1 text-center"><img src="${day.icon}" class="w-6 h-6 inline-block mx-auto" alt="${day.description}"></td><td class="py-1 text-center">${day.description}</td><td class="py-1 text-right font-mono">${day.temp}</td></tr>`).join('');
                     
                     if (index === 0) {
@@ -338,6 +338,12 @@ document.addEventListener('DOMContentLoaded', () => {
         weatherSettingsContainer.innerHTML = '';
         (config.weather?.cities || []).forEach(city => addWeatherCityForm(city));
         
+        // 加载天气API Key
+        const weatherApiKeyInput = document.getElementById('weather-api-key');
+        if (weatherApiKeyInput) {
+            weatherApiKeyInput.value = config.weather?.apiKey || '';
+        }
+
         searchSettingsContainer.innerHTML = '';
         (config.search?.engines || []).forEach(engine => {
             if(engine.custom) addSearchEngineForm(engine);
@@ -416,6 +422,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const siteTitle = siteTitleInput.value;
         const navItems = Array.from(navSettingsContainer.children).map(div => ({ name: div.querySelector('.nav-name').value, url: div.querySelector('.nav-url').value, icon: div.querySelector('.nav-icon').value }));
         const cities = Array.from(weatherSettingsContainer.children).map(div => div.querySelector('.weather-city').value).filter(city => city.trim() !== '');
+        const weatherApiKeyInput = document.getElementById('weather-api-key');
+        const apiKey = weatherApiKeyInput ? weatherApiKeyInput.value : '';
         
         const customEngines = Array.from(searchSettingsContainer.children).map(div => ({ 
             name: div.querySelector('.search-engine-name').value, 
@@ -437,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bgType === 'url') bgValue = bgUrlInput.value;
         else if (bgType === 'upload') bgValue = bgUploadPath.textContent;
 
-        const newConfig = { siteTitle, navItems, weather: { cities }, search, background: { type: bgType, value: bgValue } };
+        const newConfig = { siteTitle, navItems, weather: { cities, apiKey }, search, background: { type: bgType, value: bgValue } };
         
         if (newPassword) {
             newConfig.password = newPassword;

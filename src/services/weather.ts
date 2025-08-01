@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { readConfig } from './config';
 // ** FIX: Removed dotenv import and config call from this file. **
 // This will now be handled globally by index.ts
 
@@ -26,9 +27,10 @@ async function getLocationId(cityName: string, apiKey: string): Promise<string |
 
 // Main function to get weather data
 export async function getWeather(cityName: string) {
-    const apiKey = process.env.HEWEATHER_KEY;
+    const config = await readConfig();
+    const apiKey = config.weather?.apiKey || process.env.HEWEATHER_KEY;
     if (!apiKey) {
-        console.error('HeWeather API key not configured. Make sure HEWEATHER_KEY is in your .env file.');
+        console.error('HeWeather API key not configured. Configure it in the settings or add HEWEATHER_KEY to your .env file.');
         throw new Error('HeWeather API key not configured.');
     }
 

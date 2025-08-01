@@ -113,9 +113,14 @@
                     <button id="add-nav-item-btn" class="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">添加导航项</button>
                 </div>
 
-                <!-- 天气城市设置 -->
+                <!-- 天气设置 -->
                 <div class="mt-6">
-                    <h3 class="font-semibold text-lg mb-2">天气城市</h3>
+                    <h3 class="font-semibold text-lg mb-2">天气设置</h3>
+                    <div class="p-2 bg-white/10 rounded-lg flex items-center gap-2 mb-2">
+                        <label for="weather-api-key" class="flex-shrink-0">天气API Key:</label>
+                        <input type="text" id="weather-api-key" placeholder="输入天气API密钥" class="w-full bg-transparent border-b border-white/30 p-1 focus:outline-none focus:border-white placeholder:text-slate-400">
+                    </div>
+                    <h4 class="font-medium text-md mb-2 mt-4">天气城市</h4>
                     <div id="weather-settings-container" class="space-y-2"></div>
                     <button id="add-weather-city-btn" class="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">添加城市</button>
                 </div>

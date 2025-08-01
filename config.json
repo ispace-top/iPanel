@@ -61,7 +61,8 @@
     "cities": [
       "北京",
       "上海"
-    ]
+    ],
+    "apiKey": "c72cea469bb14f8d87135353fb548c6e"
   },
   "background": {
     "type": "bing",

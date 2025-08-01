@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-import path from 'path';
+const dotenv = require('dotenv');
+const path = require('path');
 
 // --- 诊断并加载 .env 文件的最终方案 ---
 // --- Final solution to diagnose and load the .env file ---
@@ -17,14 +17,15 @@ if (dotEnvResult.error) {
 }
 // --- 诊断结束 ---
 
-import express, { Request, Response, RequestHandler } from 'express';
-import crypto from 'crypto';
-import multer from 'multer';
-import { readConfig, saveConfig } from './services/config';
-import { getSystemInfo } from './services/systemInfo';
-import { getWeather } from './services/weather';
-import { getBingWallpaper } from './services/wallpaper';
-import { applySpeedLimit, removeSpeedLimit } from './services/networkService';
+const express = require('express');
+const { Request, Response, RequestHandler } = express;
+const crypto = require('crypto');
+const multer = require('multer');
+const { readConfig, saveConfig } = require('./services/config');
+const { getSystemInfo } = require('./services/systemInfo');
+const { getWeather } = require('./services/weather');
+const { getBingWallpaper } = require('./services/wallpaper');
+const { applySpeedLimit, removeSpeedLimit, getSpeedLimitStatus } = require('./services/networkService');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -163,6 +164,24 @@ app.post('/api/upload/background', uploadBackground.single('background') as unkn
 });
 
 // 网络限速 API 端点
+// 查询限速状态
+app.get('/api/network/speed-limit', async (req: Request, res: Response) => {
+    const { interface: interfaceName } = req.query;
+
+    if (!interfaceName) {
+        return res.status(400).json({ success: false, message: '网络接口是必需的' });
+    }
+
+    try {
+        const result = await getSpeedLimitStatus(interfaceName as string);
+        res.json(result);
+    } catch (error) {
+        console.error('处理查询限速状态请求失败:', error);
+        res.status(500).json({ success: false, message: `服务器错误: ${(error as Error).message}` });
+    }
+});
+
+// 应用或移除限速
 app.post('/api/network/speed-limit', async (req: Request, res: Response) => {
     const { interface: interfaceName, speed, action } = req.body;
 

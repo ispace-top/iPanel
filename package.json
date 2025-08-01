@@ -6,7 +6,7 @@
   "scripts": {
     "start": "tsc && node dist/index.js",
     "build": "tsc",
-    "dev": "PORT=3001 ts-node-dev --respawn --transpile-only src/index.ts"
+    "dev": "PORT=3001 ts-node-dev --respawn --transpile-only --compiler-options '{\"module\":\"CommonJS\"}' src/index.ts"
   },
   "dependencies": {
     "axios": "^1.7.2",

@@ -1,5 +1,5 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+const { exec } = require('child_process');
+const { promisify } = require('util');
 
 const execAsync = promisify(exec);
 
@@ -9,7 +9,7 @@ const execAsync = promisify(exec);
  * @param speedLimit 限速值 (如 3mbit)
  * @returns 是否成功及消息
  */
-export async function applySpeedLimit(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
+async function applySpeedLimit(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
     try {
         // 先清空现有规则
         // 使用输出重定向代替stdio选项，以避免TypeScript类型错误
@@ -33,11 +33,54 @@ export async function applySpeedLimit(interfaceName: string, speedLimit: string)
 }
 
 /**
+ * 查询网络限速状态
+ * @param interfaceName 网络接口名称 (如 eth0, wlan0)
+ * @returns 限速状态信息
+ */
+async function getSpeedLimitStatus(interfaceName: string): Promise<{ 
+    success: boolean; 
+    hasLimit: boolean; 
+    speed?: string; 
+    message: string 
+}> {
+    try {
+        const { stdout } = await execAsync(`tc qdisc show dev ${interfaceName}`);
+        
+        // 检查输出中是否包含htb（Hierarchical Token Bucket）规则
+        if (stdout.includes('htb')) {
+            // 尝试获取限速值
+            const { stdout: classOutput } = await execAsync(`tc class show dev ${interfaceName}`);
+            const speedMatch = classOutput.match(/rate\s+(\w+)/);
+            
+            return {
+                success: true,
+                hasLimit: true,
+                speed: speedMatch ? speedMatch[1] : '未知',
+                message: `接口 ${interfaceName} 当前有限速规则`
+            };
+        }
+        
+        return {
+            success: true,
+            hasLimit: false,
+            message: `接口 ${interfaceName} 没有限速规则`
+        };
+    } catch (error) {
+        console.error('查询限速状态失败:', error);
+        return {
+            success: false,
+            hasLimit: false,
+            message: `查询限速状态失败: ${(error as Error).message}`
+        };
+    }
+}
+
+/**
  * 移除网络限速设置
  * @param interfaceName 网络接口名称 (如 eth0, wlan0)
  * @returns 是否成功及消息
  */
-export async function removeSpeedLimit(interfaceName: string): Promise<{ success: boolean; message: string }> {
+async function removeSpeedLimit(interfaceName: string): Promise<{ success: boolean; message: string }> {
     try {
         // 清空规则
         await execAsync(`tc qdisc del dev ${interfaceName} root`);
@@ -47,3 +90,10 @@ export async function removeSpeedLimit(interfaceName: string): Promise<{ success
         return { success: false, message: `移除限速失败: ${(error as Error).message}` };
     }
 }
+
+// 导出函数
+module.exports = {
+    applySpeedLimit,
+    removeSpeedLimit,
+    getSpeedLimitStatus
+};

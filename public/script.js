@@ -42,17 +42,70 @@ document.addEventListener('DOMContentLoaded', () => {
     const speedLimitValueInput = getElem('speed-limit-value');
     const applySpeedLimitBtn = getElem('apply-speed-limit');
     const removeSpeedLimitBtn = getElem('remove-speed-limit');
+    
+    // 创建当前限速状态显示元素
+    const currentSpeedLimitDisplay = document.createElement('div');
+    currentSpeedLimitDisplay.className = 'mt-2 text-sm text-green-400';
+    currentSpeedLimitDisplay.id = 'current-speed-limit';
+    // 插入到限速设置区域
+    if (speedLimitSettings) {
+      speedLimitSettings.parentNode?.insertBefore(currentSpeedLimitDisplay, speedLimitSettings.nextSibling);
+    }
 
     // 添加网络限速相关事件监听
     if (enableSpeedLimitCheckbox) {
         enableSpeedLimitCheckbox.addEventListener('change', toggleSpeedLimitSettings);
     }
     if (applySpeedLimitBtn) {
-        applySpeedLimitBtn.addEventListener('click', applySpeedLimit);
+        applySpeedLimitBtn.addEventListener('click', async () => {
+            await applySpeedLimit();
+            // 应用限速后更新状态
+            await fetchSpeedLimitStatus();
+        });
     }
     if (removeSpeedLimitBtn) {
-        removeSpeedLimitBtn.addEventListener('click', removeSpeedLimit);
+        removeSpeedLimitBtn.addEventListener('click', async () => {
+            await removeSpeedLimit();
+            // 移除限速后更新状态
+            await fetchSpeedLimitStatus();
+        });
     }
+    if (networkInterfaceSelect) {
+        networkInterfaceSelect.addEventListener('change', async () => {
+            // 切换网络接口后更新状态
+            await fetchSpeedLimitStatus();
+        });
+    }
+
+    // 查询当前限速状态
+    async function fetchSpeedLimitStatus() {
+        try {
+            const interfaceName = networkInterfaceSelect?.value || 'eth0';
+            const response = await fetch(`/api/network/speed-limit?interface=${interfaceName}`);
+            const data = await response.json();
+
+            if (data.success) {
+                if (data.hasLimit) {
+                    enableSpeedLimitCheckbox.checked = true;
+                    toggleSpeedLimitSettings();
+                    speedLimitValueInput.value = data.speed || '';
+                    currentSpeedLimitDisplay.textContent = `当前限速: ${data.speed || '未知'}`;
+                } else {
+                    enableSpeedLimitCheckbox.checked = false;
+                    toggleSpeedLimitSettings();
+                    currentSpeedLimitDisplay.textContent = '当前没有限速';
+                }
+            } else {
+                currentSpeedLimitDisplay.textContent = `查询失败: ${data.message}`;
+            }
+        } catch (error) {
+            console.error('查询限速状态失败:', error);
+            currentSpeedLimitDisplay.textContent = '查询限速状态失败，请检查网络连接';
+        }
+    }
+
+    // 页面加载时查询限速状态
+    fetchSpeedLimitStatus();
     const navContainer = getElem('nav-container');
     const systemInfoContent = getElem('system-info-content');
     const weatherContent = getElem('weather-content');
@@ -492,25 +545,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
 
 
-            // 添加切换事件监听
-            setTimeout(() => {
-                const toggleBtn = document.getElementById('diskToggleBtn');
-                const diskContent = document.getElementById('diskContent');
-                if (toggleBtn && diskContent) {
-                    toggleBtn.addEventListener('click', () => {
-                        diskDisplayMode = diskDisplayMode === 'summary' ? 'detailed' : 'summary';
-                        diskContent.innerHTML = diskDisplayMode === 'summary' ? diskSummary : diskItems;
-                        // 更新箭头图标
-                        // summary模式(未展开)显示向上箭头，detailed模式(展开)显示向下箭头
-                        const icon = toggleBtn.querySelector('i[data-lucide]');
-                        if (icon) {
-                            icon.setAttribute('data-lucide', diskDisplayMode === 'summary' ? 'chevron-up' : 'chevron-down');
-                            // 重新渲染图标
-                            lucide.createIcons();
+            // 添加切换事件监听 - 优化版本
+            const toggleBtn = document.getElementById('diskToggleBtn');
+            const diskContent = document.getElementById('diskContent');
+            if (toggleBtn && diskContent) {
+                // 使用事件委托提高性能
+                toggleBtn.addEventListener('click', () => {
+                    diskDisplayMode = diskDisplayMode === 'summary' ? 'detailed' : 'summary';
+                    diskContent.innerHTML = diskDisplayMode === 'summary' ? diskSummary : diskItems;
+                    // 更新箭头图标 - 直接更新类名而不是重新渲染所有图标
+                    const icon = toggleBtn.querySelector('i[data-lucide]');
+                    if (icon) {
+                        const newIcon = diskDisplayMode === 'summary' ? 'chevron-up' : 'chevron-down';
+                        if (icon.getAttribute('data-lucide') !== newIcon) {
+                            icon.setAttribute('data-lucide', newIcon);
+                            // 只重新渲染这个图标
+                            lucide.createIcons([icon]);
                         }
-                    });
-                }
-            }, 0);
+                    }
+                });
+            }
 
             systemInfoContent.innerHTML = `${cpuHtml}<hr class="border-white/10 my-3">${memHtml}<hr class="border-white/10 my-3">${networkHtml}<hr class="border-white/10 my-3">${diskHtml}`;
             lucide.createIcons();
@@ -608,13 +662,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- PASSWORD & SETTINGS MODAL LOGIC ---
     function populateSettingsModal(config) {
+        // 优化DOM操作，减少重绘和回流
         siteTitleInput.value = config.siteTitle || 'NAS 控制台';
 
-        navSettingsContainer.innerHTML = '';
-        (config.navItems || []).forEach(item => addNavItemForm(item));
+        // 使用DocumentFragment批量添加导航项
+        const navFragment = document.createDocumentFragment();
+        (config.navItems || []).forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'p-2 bg-white/10 rounded-lg flex items-center gap-2';
+            let iconHtml = getIconHtml(item.icon);
+            div.innerHTML = `
+                <input type="text" placeholder="名称" value="${item.name}" class="nav-name bg-transparent border-b border-white/30 p-1 w-1/4 focus:outline-none focus:border-white placeholder:text-slate-400">
+                <input type="text" placeholder="URL" value="${item.url}" class="nav-url bg-transparent border-b border-white/30 p-1 flex-grow focus:outline-none focus:border-white placeholder:text-slate-400">
+                <div class="icon-preview-container flex items-center gap-2">
+                    <input type="hidden" class="nav-icon" value="${item.icon}">
+                    <div class="icon-preview w-8 h-8 flex items-center justify-center">${iconHtml}</div>
+                    <button class="choose-icon-btn bg-white/10 hover:bg-white/20 p-2 rounded-md" title="选择图标"><i data-lucide="image"></i></button>
+                </div>
+                <input type="file" class="nav-icon-upload hidden" accept="image/*">
+                <button class="remove-btn p-1 rounded-full hover:bg-white/20 text-red-400" title="删除此项"><i data-lucide="trash-2"></i></button>`;
+            navFragment.appendChild(div);
+        });
+        navSettingsContainer.appendChild(navFragment);
 
-        weatherSettingsContainer.innerHTML = '';
-        (config.weather?.cities || []).forEach(city => addWeatherCityForm(city));
+        // 使用DocumentFragment批量添加天气城市
+        const weatherFragment = document.createDocumentFragment();
+        (config.weather?.cities || []).forEach(city => {
+            const div = document.createElement('div');
+            div.className = 'p-2 bg-white/10 rounded-lg flex items-center gap-2';
+            div.innerHTML = `
+                <input type="text" placeholder="城市名称 (例如: 北京)" value="${city}" class="weather-city bg-transparent border-b border-white/30 p-1 flex-grow focus:outline-none focus:border-white placeholder:text-slate-400">
+                <button class="remove-btn p-1 rounded-full hover:bg-white/20 text-red-400" title="删除此城市"><i data-lucide="trash-2"></i></button>`;
+            weatherFragment.appendChild(div);
+        });
+        weatherSettingsContainer.appendChild(weatherFragment);
 
         // 加载天气API Key
         const weatherApiKeyInput = document.getElementById('weather-api-key');
@@ -622,10 +703,25 @@ document.addEventListener('DOMContentLoaded', () => {
             weatherApiKeyInput.value = config.weather?.apiKey || '';
         }
 
-        searchSettingsContainer.innerHTML = '';
+        // 使用DocumentFragment批量添加搜索引擎
+        const searchFragment = document.createDocumentFragment();
         (config.search?.engines || []).forEach(engine => {
-            if (engine.custom) addSearchEngineForm(engine);
+            if (engine.custom) {
+                const div = document.createElement('div');
+                div.className = 'p-2 bg-white/10 rounded-lg flex items-center gap-2';
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 flex-grow">
+                        <input type="text" placeholder="引擎名称" value="${engine.name}" class="search-engine-name bg-transparent border-b border-white/30 p-1 w-1/3 focus:outline-none focus:border-white placeholder:text-slate-400">
+                        <input type="text" placeholder="URL (用 %s 占位)" value="${engine.url}" class="search-engine-url bg-transparent border-b border-white/30 p-1 w-2/3 focus:outline-none focus:border-white placeholder:text-slate-400">
+                    </div>
+                     <div class="flex items-center gap-2 flex-grow-[2]">
+                        <textarea placeholder="图标SVG代码" class="search-engine-icon bg-transparent border-b border-white/30 p-1 w-full h-8 resize-none focus:outline-none focus:border-white placeholder:text-slate-400">${engine.icon}</textarea>
+                        <button class="remove-btn p-1 rounded-full hover:bg-white/20 text-red-400" title="删除此引擎"><i data-lucide="trash-2"></i></button>
+                    </div>`;
+                searchFragment.appendChild(div);
+            }
         });
+        searchSettingsContainer.appendChild(searchFragment);
 
         const bgConfig = config.background || { type: 'bing', value: '' };
         const radio = backgroundSettingsContainer.querySelector(`input[name="bg-type"][value="${bgConfig.type}"]`);
@@ -633,6 +729,9 @@ document.addEventListener('DOMContentLoaded', () => {
         bgUrlInput.value = bgConfig.type === 'url' ? bgConfig.value : '';
         bgUploadPath.textContent = bgConfig.type === 'upload' ? bgConfig.value : '';
         updateBgSettingsVisibility();
+
+        // 一次性渲染所有图标
+        lucide.createIcons();
     }
 
     function addNavItemForm(item = { name: '', url: '', icon: 'globe' }) {
@@ -804,19 +903,65 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordError.classList.add('hidden');
     };
 
-    settingsBtn.addEventListener('click', async () => {
+    // 优化设置弹窗打开速度
+    let settingsModalLoaded = false;
+    let configCache = null;
+    let configCacheTime = 0;
+    const CACHE_DURATION = 60000; // 缓存有效时间(毫秒)
+
+    // 预加载设置弹窗内容
+    async function preloadSettingsModal() {
+        if (Date.now() - configCacheTime < CACHE_DURATION && configCache) {
+            return configCache;
+        }
+
         try {
             const response = await fetch('/api/config');
             const config = await response.json();
-            currentConfig = config; // Refresh config before opening
+            configCache = config;
+            configCacheTime = Date.now();
+            return config;
+        } catch (error) {
+            console.error('预加载配置失败:', error);
+            throw error;
+        }
+    }
+
+    // 延迟初始化设置弹窗
+    function initSettingsModal(config) {
+        if (settingsModalLoaded) return;
+        settingsModalLoaded = true;
+
+        populateSettingsModal(config);
+        // 这里可以添加其他初始化逻辑
+    }
+
+    settingsBtn.addEventListener('click', async () => {
+        try {
+            // 显示加载状态
+            settingsBtn.disabled = true;
+            settingsBtn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>';
+            lucide.createIcons();
+
+            // 使用缓存的配置数据
+            const config = await preloadSettingsModal();
+            currentConfig = config;
+
             if (config.hasPassword) {
                 passwordModal.classList.remove('hidden');
                 passwordInput.focus();
             } else {
+                // 延迟初始化设置弹窗内容
+                initSettingsModal(config);
                 settingsModal.classList.remove('hidden');
             }
         } catch (error) {
             alert('无法获取配置，请刷新页面重试。');
+        } finally {
+            // 恢复按钮状态
+            settingsBtn.disabled = false;
+            settingsBtn.innerHTML = '<i data-lucide="settings" class="w-5 h-5"></i>';
+            lucide.createIcons();
         }
     });
 

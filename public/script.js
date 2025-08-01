@@ -282,16 +282,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
             document.title = config.siteTitle || 'NAS 控制台';
 
-            await applyBackground(config.background);
+            // 异步应用背景，不阻塞其他渲染
+            applyBackground(config.background);
+
+            // 使用DocumentFragment优化DOM操作
             renderNavItems(config.navItems || []);
-            renderWeather(config.weather?.cities || []);
             populateSearch(config.search);
             populateSettingsModal(config);
 
         } catch (error) {
             console.error("获取或解析配置文件失败:", error);
             document.title = '加载失败';
-            await applyBackground();
+            applyBackground(); // 非阻塞调用
             navContainer.innerHTML = '<div class="text-center p-4 rounded-lg col-span-full">获取导航配置失败。</div>';
             weatherContent.innerHTML = '<div>获取天气配置失败。</div>';
         }
@@ -337,6 +339,10 @@ document.addEventListener('DOMContentLoaded', () => {
             navContainer.innerHTML = '<div class="text-center p-4 rounded-lg col-span-full">没有配置导航项，请在设置中添加。</div>';
             return;
         }
+
+        // 使用DocumentFragment减少DOM操作次数
+        const fragment = document.createDocumentFragment();
+
         items.forEach(item => {
             const div = document.createElement('a');
             div.href = item.url;
@@ -346,8 +352,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let iconHtml = getIconHtml(item.icon, 'w-12 h-12 mb-2');
 
             div.innerHTML = `${iconHtml}<span class="font-semibold text-center text-sm break-all">${item.name}</span>`;
-            navContainer.appendChild(div);
+            fragment.appendChild(div);
         });
+
+        navContainer.appendChild(fragment);
         lucide.createIcons();
     }
 
@@ -748,8 +756,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 优化图标选择器，只在需要时才创建DOM元素
+    let iconPickerPopulated = false;
     function populateIconPicker() {
+        // 如果已经填充过，不再重复填充
+        if (iconPickerPopulated) return;
+        iconPickerPopulated = true;
+
         iconPickerGrid.innerHTML = '';
+        // 使用DocumentFragment优化DOM操作
+        const fragment = document.createDocumentFragment();
+
         Object.entries(PREBUILT_ICONS).forEach(([id, icon]) => {
             const button = document.createElement('button');
             button.className = "icon-picker-item flex flex-col items-center justify-center p-2 rounded-xl bg-white/10 backdrop-blur-md shadow-lg aspect-square";
@@ -758,8 +775,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="w-10 h-10 text-white">${icon.svg}</div>
                 <span class="text-xs mt-2 text-slate-300">${icon.name}</span>
             `;
-            iconPickerGrid.appendChild(button);
+            fragment.appendChild(button);
         });
+
+        iconPickerGrid.appendChild(fragment);
     }
 
     function openIconPicker(formElement) {
@@ -909,11 +928,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 优化初始化过程，延迟加载非关键资源
     function init() {
-        populateIconPicker();
-        fetchConfigAndRender();
-        updateSystemInfo();
+        // 优先加载配置和系统信息
+        Promise.all([
+            fetchConfigAndRender(),
+            updateSystemInfo()
+        ]).then(() => {
+            // 配置和系统信息加载完成后，再加载天气数据
+            if (currentConfig && currentConfig.weather && currentConfig.weather.cities) {
+                renderWeather(currentConfig.weather.cities);
+            }
+            // 延迟初始化图标选择器
+            setTimeout(() => {
+                populateIconPicker();
+            }, 1000);
+        });
         setInterval(updateSystemInfo, 5000);
+    }
+
+    // 优化背景图片加载
+    async function applyBackground(bgConfig) {
+        let fallbackUrl = 'https://source.unsplash.com/random/1920x1080?nature,scenery';
+        let bgUrl = fallbackUrl;
+
+        // 先设置一个轻量级的背景色，避免页面空白
+        document.body.style.backgroundColor = '#1e293b';
+
+        if (!bgConfig) {
+            // 使用IntersectionObserver延迟加载背景图片
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        document.body.style.backgroundImage = `url('${bgUrl}')`;
+                        observer.disconnect();
+                    }
+                });
+            });
+            observer.observe(document.body);
+            return;
+        }
+
+        try {
+            switch (bgConfig.type) {
+                case 'bing':
+                    const response = await fetch('/api/bing-wallpaper');
+                    if (!response.ok) throw new Error('从后端获取壁纸失败');
+                    const data = await response.json();
+                    bgUrl = data.url;
+                    break;
+                case 'url':
+                    if (bgConfig.value) bgUrl = bgConfig.value;
+                    break;
+                case 'upload':
+                    if (bgConfig.value) bgUrl = bgConfig.value;
+                    break;
+                default:
+                    break;
+            }
+
+            // 使用IntersectionObserver延迟加载背景图片
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        document.body.style.backgroundImage = `url('${bgUrl}')`;
+                        observer.disconnect();
+                    }
+                });
+            });
+            observer.observe(document.body);
+
+        } catch (error) {
+            console.error("应用背景失败，将使用备用背景:", error);
+            bgUrl = fallbackUrl;
+            document.body.style.backgroundImage = `url('${bgUrl}')`;
+        }
     }
 
     init();

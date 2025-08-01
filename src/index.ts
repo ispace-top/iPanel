@@ -24,6 +24,7 @@ import { readConfig, saveConfig } from './services/config';
 import { getSystemInfo } from './services/systemInfo';
 import { getWeather } from './services/weather';
 import { getBingWallpaper } from './services/wallpaper';
+import { applySpeedLimit, removeSpeedLimit } from './services/networkService';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -158,6 +159,33 @@ app.post('/api/upload/background', uploadBackground.single('background') as unkn
         res.json({ filePath: `/uploads/backgrounds/${req.file.filename}` });
     } else {
         res.status(400).send('No file uploaded.');
+    }
+});
+
+// 网络限速 API 端点
+app.post('/api/network/speed-limit', async (req: Request, res: Response) => {
+    const { interface: interfaceName, speed, action } = req.body;
+
+    if (!interfaceName || !action) {
+        return res.status(400).json({ success: false, message: '网络接口和操作类型是必需的' });
+    }
+
+    try {
+        if (action === 'apply') {
+            if (!speed) {
+                return res.status(400).json({ success: false, message: '应用限速时必须提供限速值' });
+            }
+            const result = await applySpeedLimit(interfaceName, speed);
+            res.json(result);
+        } else if (action === 'remove') {
+            const result = await removeSpeedLimit(interfaceName);
+            res.json(result);
+        } else {
+            res.status(400).json({ success: false, message: '无效的操作类型，支持的操作: apply, remove' });
+        }
+    } catch (error) {
+        console.error('处理网络限速请求失败:', error);
+        res.status(500).json({ success: false, message: `服务器错误: ${(error as Error).message}` });
     }
 });
 

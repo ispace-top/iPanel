@@ -34,6 +34,25 @@ const PREBUILT_ICONS = {
 document.addEventListener('DOMContentLoaded', () => {
     // --- ELEMENT SELECTORS ---
     const getElem = (id) => document.getElementById(id);
+
+    // 网络限速相关元素
+    const enableSpeedLimitCheckbox = getElem('enable-speed-limit');
+    const speedLimitSettings = getElem('speed-limit-settings');
+    const networkInterfaceSelect = getElem('network-interface');
+    const speedLimitValueInput = getElem('speed-limit-value');
+    const applySpeedLimitBtn = getElem('apply-speed-limit');
+    const removeSpeedLimitBtn = getElem('remove-speed-limit');
+
+    // 添加网络限速相关事件监听
+    if (enableSpeedLimitCheckbox) {
+        enableSpeedLimitCheckbox.addEventListener('change', toggleSpeedLimitSettings);
+    }
+    if (applySpeedLimitBtn) {
+        applySpeedLimitBtn.addEventListener('click', applySpeedLimit);
+    }
+    if (removeSpeedLimitBtn) {
+        removeSpeedLimitBtn.addEventListener('click', removeSpeedLimit);
+    }
     const navContainer = getElem('nav-container');
     const systemInfoContent = getElem('system-info-content');
     const weatherContent = getElem('weather-content');
@@ -48,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Password Modal
     const passwordModal = getElem('password-modal');
-    const closePasswordModalBtn = getElem('close-password-modal-btn'); 
+    const closePasswordModalBtn = getElem('close-password-modal-btn');
     const passwordInput = getElem('password-input');
     const passwordError = getElem('password-error');
     const passwordSubmitBtn = getElem('password-submit-btn');
@@ -79,16 +98,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const iconPickerGrid = getElem('icon-picker-grid');
     const closeIconPickerBtn = getElem('close-icon-picker-btn');
     const uploadFromPickerBtn = getElem('upload-from-picker-btn');
-    
+
     // --- STATE ---
     let currentConfig = {};
     let activeIconForm = null;
-    
+
     // --- DYNAMIC COLOR HELPERS ---
+    // 用于文本颜色
     const getColorForPercentage = (percentage) => {
         if (percentage >= 80) return 'text-red-400';
         if (percentage >= 50) return 'text-yellow-400';
         return 'text-green-400';
+    };
+
+    // 用于背景颜色
+    const getBgColorForPercentage = (percentage) => {
+        if (percentage >= 80) return 'bg-red-400';
+        if (percentage >= 50) return 'bg-yellow-400';
+        return 'bg-green-400';
     };
 
     const getColorForCpuTemp = (temp) => {
@@ -106,6 +133,144 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'text-blue-400';
     };
 
+    // 根据天气图标ID返回颜色类名
+    const getColorForWeatherIconId = (iconId) => {
+        // 添加调试信息
+        console.log('天气图标ID:', iconId);
+        
+        // 获取颜色值
+        const color = getColorValueFromIconId(iconId);
+        console.log('为图标', iconId, '应用颜色类:', color);
+        
+        // 返回颜色类名
+        return color;
+    };
+
+    // 根据图标ID确定天气类型并返回颜色类名
+    const getColorValueFromIconId = (iconId) => {
+        // 晴天相关图标 (100-104, 150-153)
+        if (['100', '101', '102', '103', '104', '150', '151', '152', '153'].includes(iconId)) return 'text-yellow-400';
+        // 阴天相关图标 (300-302)
+        if (['300', '301', '302'].includes(iconId)) return 'text-slate-500';
+        // 多云相关图标 (303-314)
+        if (['303', '304', '305', '306', '307', '308', '309', '310', '311', '312', '313', '314'].includes(iconId)) return 'text-slate-300';
+        // 雨天相关图标 (315-318, 350-351, 399)
+        if (['315', '316', '317', '318', '350', '351', '399'].includes(iconId)) return 'text-blue-400';
+        // 雪天相关图标 (400-407, 409-410, 456-457, 499)
+        if (['400', '401', '402', '403', '404', '405', '406', '407', '409', '410', '456', '457', '499'].includes(iconId)) return 'text-cyan-300';
+        // 雷暴相关图标 (500-515)
+        if (['500', '501', '502', '503', '504', '507', '508', '509', '510', '511', '512', '513', '514', '515'].includes(iconId)) return 'text-purple-400';
+        // 雾相关图标 (800-807)
+        if (['800', '801', '802', '803', '804', '805', '806', '807'].includes(iconId)) return 'text-slate-400';
+        // 寒冷相关图标 (900-901)
+        if (['900', '901'].includes(iconId)) return 'text-blue-300';
+        // 默认颜色
+        console.log('未匹配到图标类型，使用默认颜色');
+        return 'text-white';
+    };
+
+    // 保留原函数用于向后兼容
+    const getColorForWeatherType = (weatherType) => {
+        // 转换为小写以便匹配
+        const type = weatherType.toLowerCase();
+
+        // 晴天相关
+        if (type.includes('晴')) return 'text-yellow-400';
+        // 阴天相关
+        if (type.includes('阴')) return 'text-slate-500';
+        // 多云相关
+        if (type.includes('云')) return 'text-slate-300';
+        // 雨天相关
+        if (type.includes('雨')) return 'text-blue-400';
+        // 雪天相关
+        if (type.includes('雪')) return 'text-cyan-300';
+        // 雷暴相关（同时包含雷和暴）
+        if (type.includes('雷') && type.includes('暴')) return 'text-purple-400';
+        // 暴雨相关（只包含暴和雨）
+        if (type.includes('暴') && type.includes('雨')) return 'text-blue-400';
+        // 雾相关
+        if (type.includes('雾')) return 'text-slate-400';
+        // 默认颜色
+        return 'text-white';
+    };
+
+    // 注意：此函数现在根据天气类型返回固定颜色，
+    // 与实际天气无关，只与图标代表的天气类型相关
+
+    // --- NETWORK SPEED LIMIT FUNCTIONS ---
+    // 切换限速设置的显示/隐藏
+    function toggleSpeedLimitSettings() {
+        if (enableSpeedLimitCheckbox.checked) {
+            speedLimitSettings.classList.remove('hidden');
+        } else {
+            speedLimitSettings.classList.add('hidden');
+        }
+    }
+
+    // 应用限速设置
+    async function applySpeedLimit() {
+        const interfaceName = networkInterfaceSelect.value;
+        const speedLimit = speedLimitValueInput.value.trim();
+
+        if (!speedLimit) {
+            alert('请输入限速值');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/network/speed-limit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    interface: interfaceName,
+                    speed: speedLimit,
+                    action: 'apply'
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('限速已应用');
+            } else {
+                alert('应用限速失败: ' + data.message);
+            }
+        } catch (error) {
+            console.error('应用限速失败:', error);
+            alert('应用限速失败，请检查网络连接');
+        }
+    }
+
+    // 移除限速设置
+    async function removeSpeedLimit() {
+        const interfaceName = networkInterfaceSelect.value;
+
+        try {
+            const response = await fetch('/api/network/speed-limit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    interface: interfaceName,
+                    action: 'remove'
+                })
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('限速已移除');
+                enableSpeedLimitCheckbox.checked = false;
+                toggleSpeedLimitSettings();
+            } else {
+                alert('移除限速失败: ' + data.message);
+            }
+        } catch (error) {
+            console.error('移除限速失败:', error);
+            alert('移除限速失败，请检查网络连接');
+        }
+    }
 
     // --- MAIN FUNCTIONS ---
     async function fetchConfigAndRender() {
@@ -114,9 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const config = await response.json();
             currentConfig = config;
-            
+
             document.title = config.siteTitle || 'NAS 控制台';
-            
+
             await applyBackground(config.background);
             renderNavItems(config.navItems || []);
             renderWeather(config.weather?.cities || []);
@@ -126,12 +291,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("获取或解析配置文件失败:", error);
             document.title = '加载失败';
-            await applyBackground(); 
+            await applyBackground();
             navContainer.innerHTML = '<div class="text-center p-4 rounded-lg col-span-full">获取导航配置失败。</div>';
             weatherContent.innerHTML = '<div>获取天气配置失败。</div>';
         }
     }
-    
+
     async function applyBackground(bgConfig) {
         let fallbackUrl = 'https://source.unsplash.com/random/1920x1080?nature,scenery';
         let bgUrl = fallbackUrl;
@@ -140,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.style.backgroundImage = `url('${bgUrl}')`;
             return;
         }
-        
+
         try {
             switch (bgConfig.type) {
                 case 'bing':
@@ -162,7 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("应用背景失败，将使用备用背景:", error);
             bgUrl = fallbackUrl;
         }
-        
+
         document.body.style.backgroundImage = `url('${bgUrl}')`;
     }
 
@@ -177,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
             div.href = item.url;
             div.target = "_blank";
             div.className = "icon-item flex flex-col items-center justify-center p-4 rounded-xl bg-white/10 backdrop-blur-md shadow-lg aspect-square";
-            
+
             let iconHtml = getIconHtml(item.icon, 'w-12 h-12 mb-2');
 
             div.innerHTML = `${iconHtml}<span class="font-semibold text-center text-sm break-all">${item.name}</span>`;
@@ -185,7 +350,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         lucide.createIcons();
     }
-    
+
+    // 全局变量，保持磁盘显示模式状态
+    let diskDisplayMode = 'summary'; // 'summary' 或 'detailed'
+
     async function updateSystemInfo() {
         try {
             const response = await fetch('/api/system');
@@ -201,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const i = Math.floor(Math.log(bytes) / Math.log(k));
                 return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
             };
-            
+
             const cpuTempHtml = data.cpu.temperature ? `<div class="flex justify-between"><span>温度:</span><span class="font-mono ${getColorForCpuTemp(data.cpu.temperature)}">${data.cpu.temperature}°C</span></div>` : '';
             const cpuFanHtml = data.cpu.fanSpeed ? `<div class="flex justify-between"><span>风扇转速:</span><span class="font-mono">${data.cpu.fanSpeed} RPM</span></div>` : '';
             const cpuHtml = `
@@ -220,8 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="font-bold text-slate-100 mb-1">内存</h4>
                     <div class="space-y-1 text-xs pl-2">
                         <div class="flex justify-between items-center mb-1"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.mem.usage)}">${(data.mem.usage || 0).toFixed(2)}%</span></div>
-                        <div class="w-full bg-slate-700/50 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width: ${(data.mem.usage || 0).toFixed(2)}%"></div></div>
-                        <div class="text-right text-slate-400 font-mono text-[10px]">${formatBytes(data.mem.used)} / ${formatBytes(data.mem.total)}</div>
+                        <div class="w-full bg-slate-700/50 rounded-full h-2.5"><div class="h-2.5 rounded-full ${getBgColorForPercentage(data.mem.usage)}" style="width: ${(data.mem.usage || 0).toFixed(2)}%"></div></div>
+                        <div class="text-right text-slate-200 font-mono text-[10px]">${formatBytes(data.mem.used)} / ${formatBytes(data.mem.total)}</div>
+                </div>
                     </div>
                 </div>`;
 
@@ -237,18 +406,75 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>`;
 
-            const diskRows = (data.fs || []).map(d => `<tr class="border-b border-white/10 last:border-none"><td class="py-1 pr-2 truncate" title="${d.fs}">${d.fs}</td><td class="py-1 px-2 text-right font-mono whitespace-nowrap text-[11px]">${formatBytes(d.used)}|${formatBytes(d.size)}</td><td class="py-1 pl-2 text-right font-mono whitespace-nowrap ${getColorForPercentage(d.use || 0)}">${(d.use || 0).toFixed(1)}%</td></tr>`).join('');
+            // 计算磁盘总使用率和总大小
+            const totalDiskUsed = (data.fs || []).reduce((sum, d) => sum + (d.used || 0), 0);
+            const totalDiskSize = (data.fs || []).reduce((sum, d) => sum + (d.size || 0), 0);
+            const totalDiskUsage = totalDiskSize > 0 ? (totalDiskUsed / totalDiskSize) * 100 : 0;
+
+            // 磁盘详细信息项
+            const diskItems = (data.fs || []).map(d => `
+                <div class="mb-3 last:mb-0">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-medium truncate text-[10px]" title="${d.fs}">${d.fs}</span>
+                        <span class="font-mono ${getColorForPercentage(d.use || 0)} text-[10px]">${(d.use || 0).toFixed(1)}%</span>
+                    </div>
+                    <div class="w-full bg-slate-700/50 rounded-full h-2"><div class="h-2 rounded-full ${getBgColorForPercentage(d.use || 0)}" style="width: ${(d.use || 0).toFixed(1)}%"></div></div>
+                    <div class="text-right text-slate-200 font-mono text-[9px]">${formatBytes(d.used)} / ${formatBytes(d.size)}</div>
+                </div>
+            `).join('');
+
+            // 磁盘总信息项
+            const diskSummary = `
+                <div class="mb-2">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-medium text-[10px]">总使用率</span>
+                        <span class="font-mono ${getColorForPercentage(totalDiskUsage)} text-[10px]">${totalDiskUsage.toFixed(1)}%</span>
+                    </div>
+                    <div class="w-full bg-slate-700/50 rounded-full h-2"><div class="h-2 rounded-full ${getBgColorForPercentage(totalDiskUsage)}" style="width: ${totalDiskUsage.toFixed(1)}%"/></div>
+                    <div class="text-right text-slate-200 font-mono text-[9px]">${formatBytes(totalDiskUsed)} / ${formatBytes(totalDiskSize)}</div>
+                </div>`;
+
+            // 添加磁盘显示模式切换按钮
+
+            // 切换按钮HTML (使用箭头图标)
+            // summary模式(未展开)显示向上箭头，detailed模式(展开)显示向下箭头
+            const toggleButton = `
+                <button id="diskToggleBtn" class="ml-2 p-1 text-slate-300 hover:text-white transition-colors duration-200 focus:outline-none">
+                    <i data-lucide="${diskDisplayMode === 'summary' ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4"></i>
+                </button>`;
+
             const diskHtml = `
-                <div>
-                    <h4 class="font-bold text-slate-100 mb-1">磁盘</h4>
-                    <div class="pl-2 text-xs">
-                        <table class="w-full">
-                            <thead><tr class="text-left border-b border-white/20"><th class="py-1 font-semibold">挂载点</th><th class="py-1 font-semibold text-right">用量</th><th class="py-1 font-semibold text-right">使用率</th></tr></thead>
-                            <tbody>${diskRows}</tbody>
-                        </table>
+                <div class="relative">
+                    <h4 class="font-bold text-slate-100 mb-1 flex items-center">
+                        磁盘
+                        ${toggleButton}
+                    </h4>
+                    <div class="pl-2 text-xs" id="diskContent">
+                        ${diskDisplayMode === 'summary' ? diskSummary : diskItems}
                     </div>
                 </div>`;
-            
+
+
+            // 添加切换事件监听
+            setTimeout(() => {
+                const toggleBtn = document.getElementById('diskToggleBtn');
+                const diskContent = document.getElementById('diskContent');
+                if (toggleBtn && diskContent) {
+                    toggleBtn.addEventListener('click', () => {
+                        diskDisplayMode = diskDisplayMode === 'summary' ? 'detailed' : 'summary';
+                        diskContent.innerHTML = diskDisplayMode === 'summary' ? diskSummary : diskItems;
+                        // 更新箭头图标
+                        // summary模式(未展开)显示向上箭头，detailed模式(展开)显示向下箭头
+                        const icon = toggleBtn.querySelector('i[data-lucide]');
+                        if (icon) {
+                            icon.setAttribute('data-lucide', diskDisplayMode === 'summary' ? 'chevron-up' : 'chevron-down');
+                            // 重新渲染图标
+                            lucide.createIcons();
+                        }
+                    });
+                }
+            }, 0);
+
             systemInfoContent.innerHTML = `${cpuHtml}<hr class="border-white/10 my-3">${memHtml}<hr class="border-white/10 my-3">${networkHtml}<hr class="border-white/10 my-3">${diskHtml}`;
             lucide.createIcons();
         } catch (error) {
@@ -264,20 +490,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const results = await Promise.allSettled(cities.map(city => fetch(`/api/weather?city=${encodeURIComponent(city)}`).then(res => res.ok ? res.json() : Promise.reject({city: city, reason: res.statusText}))));
+            const results = await Promise.allSettled(
+                cities.map(city => fetch(`/api/weather?city=${encodeURIComponent(city)}`)
+                .then(res => res.ok ? res.json() : Promise.reject({ city: city, reason: res.statusText }))
+            ));
             let hasSuccess = false;
             results.forEach((result, index) => {
                 const cityWeatherContainer = document.createElement('div');
-                if (index > 0) cityWeatherContainer.classList.add('mt-4', 'pt-4', 'border-t', 'border-white/10');
+                if (index > 0) 
+                    cityWeatherContainer.classList.add('mt-4', 'pt-4', 'border-t', 'border-white/10');
                 if (result.status === 'fulfilled' && result.value) {
                     hasSuccess = true;
                     const data = result.value;
                     const forecastData = (index === 0) ? data.forecast.slice(1, 3) : data.forecast;
-                    const forecastRows = forecastData.map(day => `<tr class="border-b border-white/10 last:border-none"><td class="py-1">${day.date}</td><td class="py-1 text-center"><img src="${day.icon}" class="w-6 h-6 inline-block mx-auto" alt="${day.description}"></td><td class="py-1 text-center">${day.description}</td><td class="py-1 text-right font-mono">${day.temp}</td></tr>`).join('');
-                    
+                    const forecastRows = forecastData.map(day => {
+                        // 提取图标ID
+                        const iconId = day.icon.split('/').pop().split('.')[0];
+                        // 获取颜色类名
+                        const colorClass = getColorForWeatherIconId(iconId);
+                        return `<tr class="border-b border-white/10 last:border-none"><td class="py-1">${day.date}</td><td class="py-1 text-center"><i class="qi-${iconId} text-xl ${colorClass}" alt="${day.description}"></i></td><td class="py-1 text-center">${day.description}</td><td class="py-1 text-right font-mono">${day.temp}</td></tr>`;
+                    }).join('');
+
                     if (index === 0) {
+                        // 提取当前天气图标ID
+                        const currentIconId = data.now.icon.split('/').pop().split('.')[0];
+                        // 获取当前天气图标颜色类名
+                        const currentColorClass = getColorForWeatherIconId(currentIconId);
+                        
                         cityWeatherContainer.innerHTML = `
-                            <div class="text-center mb-4"><h4 class="font-bold text-xl text-slate-50">${data.city}</h4><div class="flex items-center justify-center gap-2 mt-1"><img src="${data.now.icon}" class="w-16 h-16 -ml-4" alt="${data.now.text}"><span class="text-5xl font-light ${getColorForWeatherTemp(data.now.temp)}">${data.now.temp}°</span></div><p class="text-slate-200 text-sm mt-1">${data.now.text}</p></div>
+                            <div class="text-center mb-4"><h4 class="font-bold text-xl text-slate-50">${data.city}</h4><div class="flex items-center justify-center gap-2 mt-1"><i class="qi-${currentIconId} text-5xl ${currentColorClass}" alt="${data.now.text}"></i><span class="text-5xl font-light ${getColorForWeatherTemp(data.now.temp)}">${data.now.temp}°</span></div><p class="text-slate-200 text-sm mt-1">${data.now.text}</p></div>
                             <hr class="border-white/10 my-3">
                             <div><h4 class="font-bold text-slate-100 mb-1">未来预报</h4><div class="pl-2 text-xs"><table class="w-full"><tbody>${forecastRows}</tbody></table></div></div>`;
                     } else {
@@ -298,9 +539,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- SEARCH LOGIC ---
     function populateSearch(searchConfig) {
         if (!searchConfig || !searchConfig.engines) return;
-        
+
         const { engines, defaultEngine } = searchConfig;
-        
+
         engineDropdown.innerHTML = engines.map(engine => `
             <button data-engine="${engine.name}" class="search-engine-option w-full text-left px-4 py-2 text-sm hover:bg-white/20 flex items-center gap-2">
                 <span class="w-5 h-5">${engine.icon}</span>
@@ -331,13 +572,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- PASSWORD & SETTINGS MODAL LOGIC ---
     function populateSettingsModal(config) {
         siteTitleInput.value = config.siteTitle || 'NAS 控制台';
-        
+
         navSettingsContainer.innerHTML = '';
         (config.navItems || []).forEach(item => addNavItemForm(item));
 
         weatherSettingsContainer.innerHTML = '';
         (config.weather?.cities || []).forEach(city => addWeatherCityForm(city));
-        
+
         // 加载天气API Key
         const weatherApiKeyInput = document.getElementById('weather-api-key');
         if (weatherApiKeyInput) {
@@ -346,9 +587,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         searchSettingsContainer.innerHTML = '';
         (config.search?.engines || []).forEach(engine => {
-            if(engine.custom) addSearchEngineForm(engine);
+            if (engine.custom) addSearchEngineForm(engine);
         });
-        
+
         const bgConfig = config.background || { type: 'bing', value: '' };
         const radio = backgroundSettingsContainer.querySelector(`input[name="bg-type"][value="${bgConfig.type}"]`);
         if (radio) radio.checked = true;
@@ -356,11 +597,11 @@ document.addEventListener('DOMContentLoaded', () => {
         bgUploadPath.textContent = bgConfig.type === 'upload' ? bgConfig.value : '';
         updateBgSettingsVisibility();
     }
-    
+
     function addNavItemForm(item = { name: '', url: '', icon: 'globe' }) {
         const div = document.createElement('div');
         div.className = 'p-2 bg-white/10 rounded-lg flex items-center gap-2';
-        
+
         let iconHtml = getIconHtml(item.icon);
 
         div.innerHTML = `
@@ -386,9 +627,9 @@ document.addEventListener('DOMContentLoaded', () => {
         weatherSettingsContainer.appendChild(div);
         lucide.createIcons();
     }
-    
-    function addSearchEngineForm(engine = {name: '', url: '', icon: '', custom: true}) {
-         const div = document.createElement('div');
+
+    function addSearchEngineForm(engine = { name: '', url: '', icon: '', custom: true }) {
+        const div = document.createElement('div');
         div.className = 'p-2 bg-white/10 rounded-lg flex items-center gap-2';
         div.innerHTML = `
             <div class="flex items-center gap-2 flex-grow">
@@ -409,7 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bgUrlInputContainer.classList.toggle('hidden', selectedType !== 'url');
         bgUploadContainer.classList.toggle('hidden', selectedType !== 'upload');
     }
-    
+
     async function handleSaveSettings() {
         const newPassword = newPasswordInput.value;
         const confirmPassword = confirmPasswordInput.value;
@@ -424,17 +665,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const cities = Array.from(weatherSettingsContainer.children).map(div => div.querySelector('.weather-city').value).filter(city => city.trim() !== '');
         const weatherApiKeyInput = document.getElementById('weather-api-key');
         const apiKey = weatherApiKeyInput ? weatherApiKeyInput.value : '';
-        
-        const customEngines = Array.from(searchSettingsContainer.children).map(div => ({ 
-            name: div.querySelector('.search-engine-name').value, 
-            url: div.querySelector('.search-engine-url').value, 
+
+        const customEngines = Array.from(searchSettingsContainer.children).map(div => ({
+            name: div.querySelector('.search-engine-name').value,
+            url: div.querySelector('.search-engine-url').value,
             icon: div.querySelector('.search-engine-icon').value,
             custom: true
         }));
 
         // Keep the default engines from the current config and add the new custom ones
         const defaultEngines = currentConfig.search.engines.filter(e => !e.custom);
-        
+
         const search = {
             engines: [...defaultEngines, ...customEngines],
             defaultEngine: currentConfig.search?.defaultEngine
@@ -446,7 +687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (bgType === 'upload') bgValue = bgUploadPath.textContent;
 
         const newConfig = { siteTitle, navItems, weather: { cities, apiKey }, search, background: { type: bgType, value: bgValue } };
-        
+
         if (newPassword) {
             newConfig.password = newPassword;
         }
@@ -491,7 +732,7 @@ document.addEventListener('DOMContentLoaded', () => {
             iconPickerGrid.appendChild(button);
         });
     }
-    
+
     function openIconPicker(formElement) {
         activeIconForm = formElement;
         iconPickerModal.classList.remove('hidden');
@@ -577,11 +818,11 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsModal.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.remove-btn');
         if (removeBtn) removeBtn.parentElement.remove();
-        
+
         const chooseIconBtn = e.target.closest('.choose-icon-btn');
         if (chooseIconBtn) openIconPicker(chooseIconBtn.closest('.icon-preview-container'));
     });
-    
+
     closeIconPickerBtn.addEventListener('click', () => iconPickerModal.classList.add('hidden'));
     uploadFromPickerBtn.addEventListener('click', () => {
         if (activeIconForm) activeIconForm.closest('.flex').querySelector('.nav-icon-upload').click();
@@ -602,7 +843,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (option) {
             const engineName = option.dataset.engine;
             const engineData = currentConfig.search.engines.find(eng => eng.name === engineName);
-            if(engineData) {
+            if (engineData) {
                 engineSelectBtn.innerHTML = `<span class="w-6 h-6">${engineData.icon}</span>`;
                 engineSelectBtn.dataset.activeEngine = engineName;
                 currentConfig.search.defaultEngine = engineName;
@@ -612,7 +853,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     searchSubmitBtn.addEventListener('click', handleSearch);
     searchInput.addEventListener('keypress', (e) => {
-        if(e.key === 'Enter') handleSearch();
+        if (e.key === 'Enter') handleSearch();
     });
 
     settingsModal.addEventListener('change', async (e) => {

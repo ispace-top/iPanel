@@ -360,6 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             if (!data) throw new Error("No data received from system API");
+            // 添加调试信息，查看CPU数据结构
+            // 已确认CPU数据结构，移除调试信息
+            // console.log('CPU数据:', data.cpu);
 
             const formatBytes = (bytes, decimals = 2) => {
                 if (!+bytes) return '0 Bytes'
@@ -370,16 +373,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
             };
 
-            const cpuTempHtml = data.cpu.temperature ? `<div class="flex justify-between"><span>温度:</span><span class="font-mono ${getColorForCpuTemp(data.cpu.temperature)}">${data.cpu.temperature}°C</span></div>` : '';
-            const cpuFanHtml = data.cpu.fanSpeed ? `<div class="flex justify-between"><span>风扇转速:</span><span class="font-mono">${data.cpu.fanSpeed} RPM</span></div>` : '';
+            // 格式化CPU频率（转换为GHz或MHz）
+            const formatCpuFrequency = (speed) => {
+                // 添加调试信息
+                console.log('原始CPU频率数据:', speed);
+                
+                // 检查数据是否合理，有些系统可能返回GHz为单位的值
+                if (speed < 10) {
+                    // 可能已经是GHz单位
+                    return `${speed.toFixed(2)} GHz`;
+                } else if (speed >= 1000) {
+                    return `${(speed / 1000).toFixed(2)} GHz`;
+                } else {
+                    return `${speed} MHz`;
+                }
+            };
+
+            const cpuTemperature = data.cpu.temperature || 0;
+            const cpuTempHtml = `<span class="font-mono ${getColorForCpuTemp(cpuTemperature)}">${cpuTemperature}°C</span>`;
+            const cpuFrequencyHtml = formatCpuFrequency(data.cpu.speed || 0);
+
             const cpuHtml = `
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">CPU</h4>
-                    <div class="space-y-1 text-xs pl-2">
-                        <div class="flex justify-between"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>
-                        ${cpuTempHtml}
-                        ${cpuFanHtml}
-                        <div class="flex justify-between"><span>核心数:</span><span class="font-mono">${data.cpu.cores}</span></div>
+                    <div class="text-xs pl-2 space-y-2">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                            <span>${data.cpu.cores}C/${data.cpu.cores}T</span>
+                            <span>${cpuFrequencyHtml}</span>
+                            <span>温度: ${cpuTempHtml}</span>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center mb-1"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>
+                            <div class="w-full bg-slate-700/50 rounded-full h-2.5"><div class="h-2.5 rounded-full ${getBgColorForPercentage(data.cpu.load)}" style="width: ${(data.cpu.load || 0).toFixed(2)}%"/></div>
+                        </div>
                     </div>
                 </div>`;
 

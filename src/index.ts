@@ -1,5 +1,5 @@
-const dotenv = require('dotenv');
 const path = require('path');
+const dotenv = require('dotenv');
 
 // --- 诊断并加载 .env 文件的最终方案 ---
 // --- Final solution to diagnose and load the .env file ---
@@ -18,14 +18,34 @@ if (dotEnvResult.error) {
 // --- 诊断结束 ---
 
 const express = require('express');
-const { Request, Response, RequestHandler } = express;
+import type { Request, Response } from 'express';
+// 为multer文件对象定义类型
+declare global {
+  namespace Express {
+    interface Request {
+      file?: Multer.File;
+    }
+    interface Multer {
+      File: {
+        fieldname: string;
+        originalname: string;
+        encoding: string;
+        mimetype: string;
+        destination: string;
+        filename: string;
+        path: string;
+        size: number;
+      }
+    }
+  }
+}
 const crypto = require('crypto');
 const multer = require('multer');
 const { readConfig, saveConfig } = require('./services/config');
 const { getSystemInfo } = require('./services/systemInfo');
 const { getWeather } = require('./services/weather');
 const { getBingWallpaper } = require('./services/wallpaper');
-const { applySpeedLimit, removeSpeedLimit, getSpeedLimitStatus } = require('./services/networkService');
+const networkService = require('./services/networkService');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -41,12 +61,12 @@ const hashPassword = (password: string): string => {
 
 // --- Multer Storage Configuration ---
 const createStorage = (destination: string) => multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
         const destPath = path.join(__dirname, '../public', destination);
         require('fs').mkdirSync(destPath, { recursive: true });
         cb(null, destPath);
     },
-    filename: (req, file, cb) => {
+    filename: (req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
@@ -79,7 +99,7 @@ app.get('/api/weather', async (req: Request, res: Response) => {
     }
 });
 
-app.get('/api/bing-wallpaper', async (req, res) => {
+app.get('/api/bing-wallpaper', async (req: Request, res: Response) => {
     try {
         const wallpaper = await getBingWallpaper();
         res.json(wallpaper);
@@ -88,7 +108,7 @@ app.get('/api/bing-wallpaper', async (req, res) => {
     }
 });
 
-app.get('/api/config', async (req, res) => {
+app.get('/api/config', async (req: Request, res: Response) => {
     try {
         const config = await readConfig();
         res.json({
@@ -101,7 +121,7 @@ app.get('/api/config', async (req, res) => {
     }
 });
 
-app.post('/api/verify-password', async (req, res) => {
+app.post('/api/verify-password', async (req: Request, res: Response) => {
     const { password } = req.body;
     if (!password) {
         return res.status(400).json({ success: false, message: 'Password required' });
@@ -122,7 +142,7 @@ app.post('/api/verify-password', async (req, res) => {
     }
 });
 
-app.post('/api/config', async (req, res) => {
+app.post('/api/config', async (req: Request, res: Response) => {
     try {
         const newConfigData = req.body;
         const currentConfig = await readConfig();
@@ -147,7 +167,7 @@ app.post('/api/config', async (req, res) => {
     }
 });
 
-app.post('/api/upload/icon', uploadIcon.single('icon') as unknown as RequestHandler, (req: Request, res: Response) => {
+app.post('/api/upload/icon', uploadIcon.single('icon'), (req: Request, res: Response) => {
     if (req.file) {
         res.json({ filePath: `/uploads/icons/${req.file.filename}` });
     } else {
@@ -155,7 +175,7 @@ app.post('/api/upload/icon', uploadIcon.single('icon') as unknown as RequestHand
     }
 });
 
-app.post('/api/upload/background', uploadBackground.single('background') as unknown as RequestHandler, (req: Request, res: Response) => {
+app.post('/api/upload/background', uploadBackground.single('background'), (req: Request, res: Response) => {
     if (req.file) {
         res.json({ filePath: `/uploads/backgrounds/${req.file.filename}` });
     } else {
@@ -173,7 +193,7 @@ app.get('/api/network/speed-limit', async (req: Request, res: Response) => {
     }
 
     try {
-        const result = await getSpeedLimitStatus(interfaceName as string);
+        const result = await networkService.getSpeedLimitStatus(interfaceName as string);
         res.json(result);
     } catch (error) {
         console.error('处理查询限速状态请求失败:', error);
@@ -194,10 +214,10 @@ app.post('/api/network/speed-limit', async (req: Request, res: Response) => {
             if (!speed) {
                 return res.status(400).json({ success: false, message: '应用限速时必须提供限速值' });
             }
-            const result = await applySpeedLimit(interfaceName, speed);
+            const result = await networkService.applySpeedLimit(interfaceName, speed);
             res.json(result);
         } else if (action === 'remove') {
-            const result = await removeSpeedLimit(interfaceName);
+            const result = await networkService.removeSpeedLimit(interfaceName);
             res.json(result);
         } else {
             res.status(400).json({ success: false, message: '无效的操作类型，支持的操作: apply, remove' });

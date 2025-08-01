@@ -9,10 +9,9 @@ const execAsync = promisify(exec);
  * @param speedLimit 限速值 (如 3mbit)
  * @returns 是否成功及消息
  */
-async function applySpeedLimit(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
+exports.applySpeedLimit = async function(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
     try {
         // 先清空现有规则
-        // 使用输出重定向代替stdio选项，以避免TypeScript类型错误
         await execAsync(`tc qdisc del dev ${interfaceName} root > /dev/null 2>&1`);
     } catch (error) {
         // 忽略删除失败的错误，可能是因为没有现有规则
@@ -30,14 +29,14 @@ async function applySpeedLimit(interfaceName: string, speedLimit: string): Promi
         console.error('应用限速失败:', error);
         return { success: false, message: `应用限速失败: ${(error as Error).message}` };
     }
-}
+};
 
 /**
  * 查询网络限速状态
  * @param interfaceName 网络接口名称 (如 eth0, wlan0)
  * @returns 限速状态信息
  */
-async function getSpeedLimitStatus(interfaceName: string): Promise<{ 
+exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{ 
     success: boolean; 
     hasLimit: boolean; 
     speed?: string; 
@@ -73,14 +72,14 @@ async function getSpeedLimitStatus(interfaceName: string): Promise<{
             message: `查询限速状态失败: ${(error as Error).message}`
         };
     }
-}
+};
 
 /**
  * 移除网络限速设置
  * @param interfaceName 网络接口名称 (如 eth0, wlan0)
  * @returns 是否成功及消息
  */
-async function removeSpeedLimit(interfaceName: string): Promise<{ success: boolean; message: string }> {
+exports.removeSpeedLimit = async function(interfaceName: string): Promise<{ success: boolean; message: string }> {
     try {
         // 清空规则
         await execAsync(`tc qdisc del dev ${interfaceName} root`);
@@ -89,11 +88,4 @@ async function removeSpeedLimit(interfaceName: string): Promise<{ success: boole
         console.error('移除限速失败:', error);
         return { success: false, message: `移除限速失败: ${(error as Error).message}` };
     }
-}
-
-// 导出函数
-module.exports = {
-    applySpeedLimit,
-    removeSpeedLimit,
-    getSpeedLimitStatus
 };

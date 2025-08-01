@@ -1,5 +1,7 @@
 import si from 'systeminformation';
 import os from 'os';
+import fs from 'fs';
+import path from 'path';
 
 export async function getSystemInfo() {
     try {
@@ -26,6 +28,35 @@ export async function getSystemInfo() {
             si.networkInterfaces(),
         ]);
 
+        // 获取CPU型号的辅助函数，支持ARM架构
+        const getCpuModel = () => {
+            try {
+                // 尝试从systeminformation库获取
+                if (cpuData.brand && cpuData.brand.toLowerCase() !== 'unknown') {
+                    return cpuData.brand;
+                }
+
+                // 如果在ARM架构上运行，尝试从/proc/cpuinfo读取
+                const cpuInfoPath = '/proc/cpuinfo';
+                if (fs.existsSync(cpuInfoPath)) {
+                    const cpuInfo = fs.readFileSync(cpuInfoPath, 'utf-8');
+                    
+                    // 查找CPU型号信息（不同ARM设备可能有不同的标签）
+                    const modelMatch = cpuInfo.match(/model\s+name\s*:\s*(.+)/i) ||
+                                      cpuInfo.match(/processor\s+:\s*(.+)/i) ||
+                                      cpuInfo.match(/cpu\s+:\s*(.+)/i);
+                    
+                    if (modelMatch && modelMatch[1]) {
+                        return modelMatch[1].trim();
+                    }
+                }
+            } catch (error) {
+                console.error('Error getting CPU model:', error);
+            }
+            
+            return 'Unknown CPU';
+        };
+
         const load = await si.currentLoad();
 
         // 为 'n' 参数添加了显式类型
@@ -37,7 +68,7 @@ export async function getSystemInfo() {
             cpu: {
                 manufacturer: cpuData.manufacturer,
                 brand: cpuData.brand,
-                model: cpuData.brand, // 添加model字段，使用brand值
+                model: getCpuModel(), // 使用辅助函数获取CPU型号，支持ARM架构
                 cores: cpuData.cores,
                 speed: cpuData.speed,
                 load: load.currentLoad,

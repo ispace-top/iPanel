@@ -398,12 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="font-bold text-slate-100 mb-1">CPU</h4>
                     <div class="text-xs pl-2 space-y-2">
                         <div class="flex flex-wrap items-center w-full">
-                            <span class="w-[60%] truncate font-medium text-left">${data.cpu.model || 'Unknown CPU'}</span>
-                                <div class="w-[40%] flex justify-end space-x-2 flex-wrap">
-                                    <span class="text-right whitespace-nowrap">${data.cpu.cores}C/${data.cpu.cores}T</span>
-                                    <span class="text-right whitespace-nowrap">${cpuFrequencyHtml}</span>
-                                    <span class="text-right whitespace-nowrap">${cpuTempHtml}</span>
-                                </div>
+                            <span class="flex-grow font-medium text-left truncate">${data.cpu.model || 'Unknown CPU'}</span>
+                            <div class="flex justify-end space-x-2 flex-wrap">
+                                <span class="text-right whitespace-nowrap">${data.cpu.cores}C/${data.cpu.cores}T</span>
+                                <span class="text-right whitespace-nowrap">${cpuFrequencyHtml}</span>
+                                <span class="text-right whitespace-nowrap">${cpuTempHtml}</span>
+                            </div>
                         </div>
                         <div class="space-y-1">
                             <div class="flex justify-between items-center mb-1"><span></span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>
@@ -426,11 +426,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const networkHtml = `
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">网络</h4>
-                    <div class="text-xs pl-2 flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                        <span class="flex-shrink-0 mb-1 sm:mb-0 font-medium truncate">${data.net.ip || 'Unknown IP'}</span>
-                        <div class="font-mono text-right">
-                            <span class="inline-flex items-center text-green-400"><i data-lucide="arrow-up" class="w-3 h-3 mr-1"></i>${formatBytes((data.net.tx_sec || 0))}/s</span>
-                            <span class="inline-flex items-center text-cyan-400 ml-2"><i data-lucide="arrow-down" class="w-3 h-3 mr-1"></i>${formatBytes((data.net.rx_sec || 0))}/s</span>
+                    <div class="text-xs pl-2 flex flex-wrap items-center">
+                        <span class="flex-grow font-medium text-left truncate mr-2">${data.net.ip || 'Unknown IP'}</span>
+                        <div class="flex justify-end space-x-2 whitespace-nowrap text-[9px]">
+                            <span class="inline-flex items-center text-green-400"><i data-lucide="arrow-up" class="w-2.5 h-2.5 mr-1"></i>${formatBytes((data.net.tx_sec || 0))}/s</span>
+                            <span class="inline-flex items-center text-cyan-400"><i data-lucide="arrow-down" class="w-2.5 h-2.5 mr-1"></i>${formatBytes((data.net.rx_sec || 0))}/s</span>
                         </div>
                     </div>
                 </div>`;

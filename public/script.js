@@ -398,12 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h4 class="font-bold text-slate-100 mb-1">CPU</h4>
                     <div class="text-xs pl-2 space-y-2">
                         <div class="flex flex-wrap items-center w-full">
-                            <span class="w-3/5 truncate font-medium text-left">${data.cpu.model || 'Unknown CPU'}</span>
-                            <div class="w-2/5 flex justify-end space-x-2">
-                                <span class="w-1/3 text-right">${data.cpu.cores}C/${data.cpu.cores}T</span>
-                                <span class="w-1/3 text-right">${cpuFrequencyHtml}</span>
-                                <span class="w-1/3 text-right">${cpuTempHtml}</span>
-                            </div>
+                            <span class="w-[60%] truncate font-medium text-left">${data.cpu.model || 'Unknown CPU'}</span>
+                                <div class="w-[40%] flex justify-end space-x-2 flex-wrap">
+                                    <span class="text-right whitespace-nowrap">${data.cpu.cores}C/${data.cpu.cores}T</span>
+                                    <span class="text-right whitespace-nowrap">${cpuFrequencyHtml}</span>
+                                    <span class="text-right whitespace-nowrap">${cpuTempHtml}</span>
+                                </div>
                         </div>
                         <div class="space-y-1">
                             <div class="flex justify-between items-center mb-1"><span></span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>

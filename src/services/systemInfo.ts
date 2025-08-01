@@ -1,4 +1,5 @@
 import si from 'systeminformation';
+import os from 'os';
 
 export async function getSystemInfo() {
     try {
@@ -15,12 +16,14 @@ export async function getSystemInfo() {
 
         // 并行获取所有其他数据以提高性能
         // Fetch all other data in parallel to improve performance
-        const [cpuData, memData, fsData, netData, temp] = await Promise.all([
+        // 添加获取网络接口信息以获取IP地址
+        const [cpuData, memData, fsData, netData, temp, networkInterfaces] = await Promise.all([
             si.cpu(),
             si.mem(),
             si.fsSize(),
             si.networkStats(),
             si.cpuTemperature(),
+            si.networkInterfaces(),
         ]);
 
         const load = await si.currentLoad();
@@ -34,6 +37,7 @@ export async function getSystemInfo() {
             cpu: {
                 manufacturer: cpuData.manufacturer,
                 brand: cpuData.brand,
+                model: cpuData.brand, // 添加model字段，使用brand值
                 cores: cpuData.cores,
                 speed: cpuData.speed,
                 load: load.currentLoad,
@@ -59,7 +63,32 @@ export async function getSystemInfo() {
             net: {
                 iface: netStat?.iface,
                 rx_sec: netStat?.rx_sec,
-                tx_sec: netStat?.tx_sec
+                tx_sec: netStat?.tx_sec,
+                ip: (() => {
+                    try {
+                        // 使用Node.js内置os模块获取网络接口
+                        const nets = os.networkInterfaces();
+                        console.log('Node.js network interfaces:', nets);
+                        
+                        for (const name of Object.keys(nets)) {
+                            // 跳过本地回环接口
+                            if (name === 'lo0') continue;
+                            
+                            for (const net of nets[name] || []) {
+                                // 跳过IPv6地址和内部地址
+                                if (net.family === 'IPv4' && !net.internal) {
+                                    console.log(`Found IPv4 address: ${net.address} on interface ${name}`);
+                                    return net.address;
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error getting network interfaces:', error);
+                    }
+                    
+                    console.warn('No IPv4 address found on non-loopback interfaces');
+                    return 'Unknown IP';
+                })()
             },
             time: {
                 current: si.time().current,

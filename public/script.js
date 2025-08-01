@@ -397,13 +397,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">CPU</h4>
                     <div class="text-xs pl-2 space-y-2">
-                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-                            <span>${data.cpu.cores}C/${data.cpu.cores}T</span>
-                            <span>${cpuFrequencyHtml}</span>
-                            <span>温度: ${cpuTempHtml}</span>
+                        <div class="flex flex-wrap items-center w-full">
+                            <span class="w-3/5 truncate font-medium text-left">${data.cpu.model || 'Unknown CPU'}</span>
+                            <div class="w-2/5 flex justify-end space-x-2">
+                                <span class="w-1/3 text-right">${data.cpu.cores}C/${data.cpu.cores}T</span>
+                                <span class="w-1/3 text-right">${cpuFrequencyHtml}</span>
+                                <span class="w-1/3 text-right">${cpuTempHtml}</span>
+                            </div>
                         </div>
                         <div class="space-y-1">
-                            <div class="flex justify-between items-center mb-1"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>
+                            <div class="flex justify-between items-center mb-1"><span></span><span class="font-mono ${getColorForPercentage(data.cpu.load)}">${(data.cpu.load || 0).toFixed(2)}%</span></div>
                             <div class="w-full bg-slate-700/50 rounded-full h-2.5"><div class="h-2.5 rounded-full ${getBgColorForPercentage(data.cpu.load)}" style="width: ${(data.cpu.load || 0).toFixed(2)}%"/></div>
                         </div>
                     </div>
@@ -413,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">内存</h4>
                     <div class="space-y-1 text-xs pl-2">
-                        <div class="flex justify-between items-center mb-1"><span>使用率:</span><span class="font-mono ${getColorForPercentage(data.mem.usage)}">${(data.mem.usage || 0).toFixed(2)}%</span></div>
+                        <div class="flex justify-between items-center mb-1"><span></span><span class="font-mono ${getColorForPercentage(data.mem.usage)}">${(data.mem.usage || 0).toFixed(2)}%</span></div>
                         <div class="w-full bg-slate-700/50 rounded-full h-2.5"><div class="h-2.5 rounded-full ${getBgColorForPercentage(data.mem.usage)}" style="width: ${(data.mem.usage || 0).toFixed(2)}%"></div></div>
                         <div class="text-right text-slate-200 font-mono text-[10px]">${formatBytes(data.mem.used)} / ${formatBytes(data.mem.total)}</div>
                 </div>
@@ -424,8 +427,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <h4 class="font-bold text-slate-100 mb-1">网络</h4>
                     <div class="text-xs pl-2 flex flex-col sm:flex-row sm:justify-between sm:items-center">
-                        <span class="flex-shrink-0 mb-1 sm:mb-0">速率:</span>
-                        <div class="font-mono sm:text-right">
+                        <span class="flex-shrink-0 mb-1 sm:mb-0 font-medium truncate">${data.net.ip || 'Unknown IP'}</span>
+                        <div class="font-mono text-right">
                             <span class="inline-flex items-center text-green-400"><i data-lucide="arrow-up" class="w-3 h-3 mr-1"></i>${formatBytes((data.net.tx_sec || 0))}/s</span>
                             <span class="inline-flex items-center text-cyan-400 ml-2"><i data-lucide="arrow-down" class="w-3 h-3 mr-1"></i>${formatBytes((data.net.rx_sec || 0))}/s</span>
                         </div>

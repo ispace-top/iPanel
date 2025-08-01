@@ -32,7 +32,7 @@ export async function getSystemInfo() {
         const getCpuModel = () => {
             try {
                 // 尝试从systeminformation库获取
-                if (cpuData.brand && cpuData.brand.toLowerCase() !== 'unknown') {
+                if (cpuData.brand && cpuData.brand.toLowerCase() !== 'unknown' && cpuData.brand !== '0') {
                     return cpuData.brand;
                 }
 
@@ -40,15 +40,21 @@ export async function getSystemInfo() {
                 const cpuInfoPath = '/proc/cpuinfo';
                 if (fs.existsSync(cpuInfoPath)) {
                     const cpuInfo = fs.readFileSync(cpuInfoPath, 'utf-8');
+                    console.log('CPU info content:', cpuInfo.substring(0, 500)); // 输出前500个字符用于调试
                     
                     // 查找CPU型号信息（不同ARM设备可能有不同的标签）
                     const modelMatch = cpuInfo.match(/model\s+name\s*:\s*(.+)/i) ||
                                       cpuInfo.match(/processor\s+:\s*(.+)/i) ||
-                                      cpuInfo.match(/cpu\s+:\s*(.+)/i);
+                                      cpuInfo.match(/cpu\s+:\s*(.+)/i) ||
+                                      cpuInfo.match(/hardware\s+:\s*(.+)/i); // 增加对hardware标签的支持
                     
-                    if (modelMatch && modelMatch[1]) {
+                    if (modelMatch && modelMatch[1] && modelMatch[1].trim() !== '0') {
                         return modelMatch[1].trim();
+                    } else if (modelMatch) {
+                        console.warn('CPU model match found but value is invalid:', modelMatch[1]);
                     }
+                } else {
+                    console.warn('CPU info path does not exist:', cpuInfoPath);
                 }
             } catch (error) {
                 console.error('Error getting CPU model:', error);
@@ -69,6 +75,7 @@ export async function getSystemInfo() {
                 manufacturer: cpuData.manufacturer,
                 brand: cpuData.brand,
                 model: getCpuModel(), // 使用辅助函数获取CPU型号，支持ARM架构
+                rawBrand: cpuData.brand, // 添加原始品牌数据用于调试
                 cores: cpuData.cores,
                 speed: cpuData.speed,
                 load: load.currentLoad,

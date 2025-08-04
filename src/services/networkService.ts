@@ -26,11 +26,33 @@ exports.applySpeedLimit = async function(interfaceName: string, speedLimit: stri
             // 尝试安装所需软件包
             try {
                 console.log('系统不支持CAKE算法，尝试安装所需软件...');
-                await execAsync(`sudo apt update && sudo apt install -y iproute2`);
+                
+                // 检查是否为Debian系统
+                const isDebian = await execAsync(`grep -q Debian /etc/os-release && echo "Debian" || echo "Other"`);
+                
+                if (isDebian.stdout.trim() === 'Debian') {
+                    // 对于Debian系统，尝试添加backports仓库并安装支持CAKE的iproute2
+                    console.log('检测到Debian系统，尝试通过backports安装支持CAKE的iproute2...');
+                    await execAsync(`sudo apt update`);
+                    // 尝试安装backports版本的iproute2
+                    try {
+                        await execAsync(`sudo apt install -y -t $(lsb_release -sc)-backports iproute2`);
+                    } catch (backportError) {
+                        console.log('无法通过backports安装，尝试常规安装...');
+                        await execAsync(`sudo apt install -y iproute2`);
+                    }
+                } else {
+                    // 非Debian系统，尝试常规安装
+                    await execAsync(`sudo apt update && sudo apt install -y iproute2`);
+                }
+                
                 // 再次检查
                 const checkAgain = await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth 1mbit > /dev/null 2>&1 || echo "CAKE still not supported"`);
                 if (checkAgain.stdout.includes('CAKE still not supported')) {
-                    return { success: false, message: `系统不支持CAKE算法，请手动安装支持CAKE的iproute2版本` };
+                    return {
+                        success: false,
+                        message: `系统不支持CAKE算法。在Debian上，您可能需要启用backports仓库或手动编译支持CAKE的iproute2版本。\n\n安装指南：\n1. 启用backports仓库：echo "deb http://deb.debian.org/debian $(lsb_release -sc)-backports main" | sudo tee /etc/apt/sources.list.d/backports.list\n2. 更新包列表：sudo apt update\n3. 安装backports版本的iproute2：sudo apt install -y -t $(lsb_release -sc)-backports iproute2`
+                    };
                 }
             } catch (installError) {
                 return { success: false, message: `安装CAKE支持失败: ${(installError as Error).message}` };

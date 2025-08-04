@@ -19,12 +19,31 @@ exports.applySpeedLimit = async function(interfaceName: string, speedLimit: stri
     }
 
     try {
-        // 应用新规则
-        await execAsync(`tc qdisc add dev ${interfaceName} root handle 1: htb default 12`);
-        await execAsync(`tc class add dev ${interfaceName} parent 1: classid 1:1 htb rate ${speedLimit} burst 15k`);
-        await execAsync(`tc class add dev ${interfaceName} parent 1:1 classid 1:12 htb rate ${speedLimit} burst 15k`);
+        // 检查系统是否支持CAKE算法
+        const checkCake = await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth 1mbit > /dev/null 2>&1 || echo "CAKE not supported"`);
+        
+        if (checkCake.stdout.includes('CAKE not supported')) {
+            // 尝试安装所需软件包
+            try {
+                console.log('系统不支持CAKE算法，尝试安装所需软件...');
+                await execAsync(`sudo apt update && sudo apt install -y iproute2`);
+                // 再次检查
+                const checkAgain = await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth 1mbit > /dev/null 2>&1 || echo "CAKE still not supported"`);
+                if (checkAgain.stdout.includes('CAKE still not supported')) {
+                    return { success: false, message: `系统不支持CAKE算法，请手动安装支持CAKE的iproute2版本` };
+                }
+            } catch (installError) {
+                return { success: false, message: `安装CAKE支持失败: ${(installError as Error).message}` };
+            }
+        }
+        
+        // 删除检查时添加的规则
+        await execAsync(`tc qdisc del dev ${interfaceName} root > /dev/null 2>&1`);
+        
+        // 应用新的CAKE规则
+        await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth ${speedLimit}`);
 
-        return { success: true, message: `已成功为接口 ${interfaceName} 应用限速 ${speedLimit}` };
+        return { success: true, message: `已成功为接口 ${interfaceName} 应用CAKE限速 ${speedLimit}` };
     } catch (error) {
         console.error('应用限速失败:', error);
         return { success: false, message: `应用限速失败: ${(error as Error).message}` };
@@ -45,17 +64,16 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
     try {
         const { stdout } = await execAsync(`tc qdisc show dev ${interfaceName}`);
         
-        // 检查输出中是否包含htb（Hierarchical Token Bucket）规则
-        if (stdout.includes('htb')) {
+        // 检查输出中是否包含cake规则
+        if (stdout.includes('cake')) {
             // 尝试获取限速值
-            const { stdout: classOutput } = await execAsync(`tc class show dev ${interfaceName}`);
-            const speedMatch = classOutput.match(/rate\s+(\w+)/);
+            const speedMatch = stdout.match(/bandwidth\s+(\w+)/);
             
             return {
                 success: true,
                 hasLimit: true,
                 speed: speedMatch ? speedMatch[1] : '未知',
-                message: `接口 ${interfaceName} 当前有限速规则`
+                message: `接口 ${interfaceName} 当前有CAKE限速规则`
             };
         }
         

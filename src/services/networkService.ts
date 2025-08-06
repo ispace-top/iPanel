@@ -1,5 +1,5 @@
-const { exec } = require('child_process');
-const { promisify } = require('util');
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
@@ -9,7 +9,7 @@ const execAsync = promisify(exec);
  * @param speedLimit 限速值 (如 3mbit)
  * @returns 是否成功及消息
  */
-exports.applySpeedLimit = async function(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
+export async function applySpeedLimit(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
     // 统一在函数开始时清空旧规则
     try {
         await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);
@@ -55,7 +55,7 @@ exports.applySpeedLimit = async function(interfaceName: string, speedLimit: stri
  * @param interfaceName 网络接口名称 (如 eth0, wlan0)
  * @returns 限速状态信息
  */
-exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{ 
+export async function getSpeedLimitStatus(interfaceName: string): Promise<{ 
     success: boolean; 
     hasLimit: boolean; 
     speed?: string; 
@@ -105,7 +105,7 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
  * @param interfaceName 网络接口名称 (如 eth0, wlan0)
  * @returns 是否成功及消息
  */
-exports.removeSpeedLimit = async function(interfaceName: string): Promise<{ success: boolean; message: string }> {
+export async function removeSpeedLimit(interfaceName: string): Promise<{ success: boolean; message: string }> {
     try {
         // 这个命令可以移除 CAKE 或 HTB 根规则
         await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);

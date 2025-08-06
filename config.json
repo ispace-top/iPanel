@@ -1,1 +1,71 @@
-
+{
+  "siteTitle": "iPanel面板",
+  "navItems": [
+    {
+      "name": "路由器",
+      "url": "https://router.itjl.top:91",
+      "icon": "prebuilt:router"
+    },
+    {
+      "name": "群晖Nas",
+      "url": "https://www.itjl.top:91",
+      "icon": "prebuilt:synology"
+    },
+    {
+      "name": "图书库",
+      "url": "https://book.itjl.top:91",
+      "icon": "prebuilt:books"
+    },
+    {
+      "name": "Git仓库",
+      "url": "https://git.itjl.top:91",
+      "icon": "prebuilt:nextcloud"
+    },
+    {
+      "name": "Jellyfin",
+      "url": "https://jellyfin.itjl.top:91",
+      "icon": "prebuilt:movies"
+    },
+    {
+      "name": "博客",
+      "url": "https://blog.ispace.top",
+      "icon": "prebuilt:plex"
+    },
+    {
+      "name": "Docker",
+      "url": "https://docker.itjl.top:91",
+      "icon": "prebuilt:docker"
+    },
+    {
+      "name": "Wiki文档",
+      "url": "https://doc.itjl.top:91",
+      "icon": "prebuilt:wiki"
+    },
+    {
+      "name": "个人笔记",
+      "url": "https://note.itjl.top:91",
+      "icon": "prebuilt:documents"
+    },
+    {
+      "name": "YAPI",
+      "url": "https://yapi.itjl.top:91",
+      "icon": "prebuilt:portainer"
+    }
+  ],
+  "weather": {
+    "cities": [
+      "北京",
+      "宣化",
+      "康保"
+    ],
+    "apiKey": "c72cea469bb14f8d87135353fb548c6e"
+  },
+  "search": {
+    "engines": [],
+    "defaultEngine": "Google"
+  },
+  "background": {
+    "type": "bing",
+    "value": ""
+  }
+}

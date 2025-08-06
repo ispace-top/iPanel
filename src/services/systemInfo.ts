@@ -3,21 +3,22 @@ import os from 'os';
 import fs from 'fs';
 import path from 'path';
 
+var fristError=0;
+
 export async function getSystemInfo() {
     try {
-        // Changed type to any[] to resolve compilation error
         let fansData: any[] = [];
         try {
             // 尝试获取风扇数据，如果不支持则跳过，避免程序崩溃
-            // Try to get fan data, skip if not supported to avoid crashing
-            // Cast 'si' to 'any' to bypass the strict type check for the 'fans' method
             fansData = await (si as any).fans();
-            // oxlint-disable-next-line no-unused-vars
         } catch (error) {
+            if (fristError < 1) {
+                console.warn("WARN：获取风扇转速失败，系统不支持或无传感器。");
+                fristError++;
+            }
         }
 
         // 并行获取所有其他数据以提高性能
-        // Fetch all other data in parallel to improve performance
         // 添加获取网络接口信息以获取IP地址
         const [cpuData, memData, fsData, netData, temp, networkInterfaces] = await Promise.all([
             si.cpu(),
@@ -40,8 +41,6 @@ export async function getSystemInfo() {
                 const cpuInfoPath = '/proc/cpuinfo';
                 if (fs.existsSync(cpuInfoPath)) {
                     const cpuInfo = fs.readFileSync(cpuInfoPath, 'utf-8');
-                    console.log('CPU info content:', cpuInfo.substring(0, 500)); // 输出前500个字符用于调试
-                    
                     // 查找CPU型号信息（不同ARM设备可能有不同的标签）
                     const modelMatch = cpuInfo.match(/model\s+name\s*:\s*(.+)/i) ||
                                       cpuInfo.match(/processor\s+:\s*(.+)/i) ||
@@ -60,13 +59,12 @@ export async function getSystemInfo() {
                 console.error('Error getting CPU model:', error);
             }
             
-            return 'Unknown CPU';
+            return '未知CPU';
         };
 
         const load = await si.currentLoad();
 
         // 为 'n' 参数添加了显式类型
-        // Added explicit type for parameter 'n'
         const defaultInterface = netData[0]?.iface || 'default';
         const netStat = netData.find((n: si.Systeminformation.NetworkStatsData) => n.iface === defaultInterface) || netData[0];
 
@@ -106,8 +104,6 @@ export async function getSystemInfo() {
                     try {
                         // 使用Node.js内置os模块获取网络接口
                         const nets = os.networkInterfaces();
-                        console.log('Node.js network interfaces:', nets);
-                        
                         for (const name of Object.keys(nets)) {
                             // 跳过本地回环接口
                             if (name === 'lo0') continue;
@@ -115,7 +111,6 @@ export async function getSystemInfo() {
                             for (const net of nets[name] || []) {
                                 // 跳过IPv6地址和内部地址
                                 if (net.family === 'IPv4' && !net.internal) {
-                                    console.log(`Found IPv4 address: ${net.address} on interface ${name}`);
                                     return net.address;
                                 }
                             }
@@ -125,7 +120,7 @@ export async function getSystemInfo() {
                     }
                     
                     console.warn('No IPv4 address found on non-loopback interfaces');
-                    return 'Unknown IP';
+                    return '未知IP';
                 })()
             },
             time: {
@@ -140,7 +135,6 @@ export async function getSystemInfo() {
     } catch (e) {
         console.error("获取系统信息时出错 (Error getting system info):", e);
         // 在出错时返回一个默认结构，防止前端崩溃
-        // Return a default structure on error to prevent frontend from crashing
         return {
             cpu: { load: 0, cores: 0, speed: 0, temperature: 0, fanSpeed: 0 },
             mem: { total: 0, used: 0, free: 0, usage: 0 },

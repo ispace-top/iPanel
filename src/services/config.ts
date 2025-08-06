@@ -41,6 +41,31 @@ const defaultConfig: Config = {
     }
 };
 
+export const getConfig = readConfig;
+
+export async function verifyPassword(password: string): Promise<boolean> {
+    try {
+        const config = await readConfig();
+        // 如果没有设置密码，直接返回 true
+        if (!config.passwordHash) {
+            return true;
+        }
+        return config.passwordHash === password;
+    } catch (error) {
+        return false;
+    }
+}
+
+export async function hasPassword(): Promise<boolean> {
+    try {
+        const config = await readConfig();
+        // 确保 passwordHash 存在且不为空字符串
+        return typeof config.passwordHash === 'string' && config.passwordHash.length > 0;
+    } catch (error) {
+        return false;
+    }
+}
+
 export async function readConfig(): Promise<Config> {
     try {
         await fs.access(configPath);

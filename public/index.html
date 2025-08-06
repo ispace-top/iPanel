@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>正在加载...</title>
+    <title>NAS 控制台</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -13,9 +13,19 @@
 <body class="text-slate-200">
 
     <header class="fixed top-0 left-0 right-0 p-4 z-10">
-        <div class="w-full max-w-screen-2xl mx-auto relative flex items-center justify-center">
+        <div class="w-full max-w-screen-2xl mx-auto relative">
+            <!-- 顶部布局容器 -->
+            <div class="absolute left-0 top-1/2 -translate-y-1/2">
+                <!-- 时间日期组件 -->
+                <div id="datetime-container" class="backdrop-blur-md bg-white/10 rounded-xl px-4 py-2 shadow-lg hidden md:block">
+                    <div class="flex items-baseline gap-2">
+                        <div id="time" class="text-2xl font-light tracking-wider"></div>
+                        <div id="date" class="text-sm text-slate-300"></div>
+                    </div>
+                </div>
+            </div>
             <!-- 搜索栏 -->
-            <div id="search-bar-container" class="w-full max-w-2xl flex items-center bg-white/10 backdrop-blur-md rounded-full shadow-lg h-12 px-2">
+            <div id="search-bar-container" class="mx-auto w-full max-w-2xl flex items-center bg-white/10 backdrop-blur-md rounded-full shadow-lg h-12 px-2">
                 <div class="relative h-full flex items-center">
                     <button id="engine-select-btn" class="flex items-center justify-center h-10 w-10 rounded-full hover:bg-white/20 transition-colors">
                         <!-- SVG将在JS中动态设置 -->
@@ -30,9 +40,11 @@
                 </button>
             </div>
             <!-- 设置按钮 -->
-            <button id="settings-btn" class="absolute right-0 top-1/2 -translate-y-1/2 flex-shrink-0 backdrop-blur-md bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors shadow-lg">
-                <i data-lucide="settings"></i>
-            </button>
+            <div class="absolute right-0 top-1/2 -translate-y-1/2">
+                <button id="settings-btn" class="flex-shrink-0 backdrop-blur-md bg-white/20 p-3 rounded-full hover:bg-white/30 transition-colors shadow-lg">
+                    <i data-lucide="settings"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -66,7 +78,7 @@
     <div id="password-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[70]">
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-sm flex flex-col shadow-2xl text-slate-100">
              <div class="p-4 border-b border-white/20 flex justify-between items-center">
-                <h2 class="text-xl font-bold">需要验证</h2>
+                <h2 class="text-xl font-bold">密码验证</h2>
                 <button id="close-password-modal-btn" class="p-1 rounded-full hover:bg-white/20"><i data-lucide="x"></i></button>
             </div>
             <div class="p-4 space-y-4">
@@ -84,7 +96,7 @@
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[50]">
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-4xl h-[80vh] flex flex-col shadow-2xl text-slate-100">
             <div class="p-4 border-b border-white/20 flex justify-between items-center">
-                <h2 class="text-xl font-bold">设置</h2>
+                <h2 class="text-xl font-bold">面板设置</h2>
                 <button id="close-modal-btn" class="p-1 rounded-full hover:bg-white/20"><i data-lucide="x"></i></button>
             </div>
             <div class="flex-grow p-4 overflow-y-auto modal-body">
@@ -207,13 +219,29 @@
     <div id="icon-picker-modal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
         <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-3xl h-[70vh] flex flex-col shadow-2xl text-slate-100">
             <div class="p-4 border-b border-white/20 flex justify-between items-center">
-                <h2 class="text-xl font-bold">选择图标</h2>
+                <h2 class="text-xl font-bold">导航图标选择</h2>
                 <div>
                      <button id="upload-from-picker-btn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-1 px-3 rounded-lg text-sm transition-colors">上传自定义图标</button>
                      <button id="close-icon-picker-btn" class="p-1 rounded-full hover:bg-white/20 ml-2"><i data-lucide="x"></i></button>
                 </div>
             </div>
             <div id="icon-picker-grid" class="flex-grow p-4 overflow-y-auto grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4">
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义确认对话框 -->
+    <div id="confirm-dialog" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[80]">
+        <div class="bg-white/20 backdrop-blur-md rounded-2xl w-full max-w-sm flex flex-col shadow-2xl text-slate-100">
+            <div class="p-4 border-b border-white/20">
+                <h2 class="text-xl font-bold" id="confirm-dialog-title">保存成功</h2>
+            </div>
+            <div class="p-4">
+                <p id="confirm-dialog-message"></p>
+            </div>
+            <div class="p-4 border-t border-white/20 flex justify-end gap-2">
+                <button id="confirm-dialog-cancel" class="px-4 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 transition-colors">取消</button>
+                <button id="confirm-dialog-confirm" class="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 transition-colors">确定</button>
             </div>
         </div>
     </div>

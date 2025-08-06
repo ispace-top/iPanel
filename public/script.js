@@ -201,54 +201,77 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 根据图标ID确定天气类型并返回颜色类名
     const getColorValueFromIconId = (iconId) => {
-        // 晴天相关图标 (100-104, 150-153)
-        if (['100', '101', '102', '103', '104', '150', '151', '152', '153'].includes(iconId)) return 'text-yellow-400';
-        // 阴天相关图标 (300-302)
-        if (['300', '301', '302'].includes(iconId)) return 'text-slate-500';
-        // 多云相关图标 (303-314)
-        if (['303', '304', '305', '306', '307', '308', '309', '310', '311', '312', '313', '314'].includes(iconId)) return 'text-slate-300';
-        // 雨天相关图标 (315-318, 350-351, 399)
-        if (['315', '316', '317', '318', '350', '351', '399'].includes(iconId)) return 'text-blue-400';
-        // 雪天相关图标 (400-407, 409-410, 456-457, 499)
-        if (['400', '401', '402', '403', '404', '405', '406', '407', '409', '410', '456', '457', '499'].includes(iconId)) return 'text-cyan-300';
-        // 雷暴相关图标 (500-515)
-        if (['500', '501', '502', '503', '504', '507', '508', '509', '510', '511', '512', '513', '514', '515'].includes(iconId)) return 'text-purple-400';
-        // 雾相关图标 (800-807)
-        if (['800', '801', '802', '803', '804', '805', '806', '807'].includes(iconId)) return 'text-slate-400';
-        // 寒冷相关图标 (900-901)
-        if (['900', '901'].includes(iconId)) return 'text-blue-300';
+        // 优化的天气图标颜色和阴影配置
+        const weatherColorMap = {
+            // 晴天相关图标 (100-104, 150-153)
+            sunny: {
+                ids: ['100', '101', '102', '103', '104', '150', '151', '152', '153'],
+                color: 'text-yellow-300',
+                glow: '0_0_15px_rgba(253,224,71,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 阴天相关图标 (300-302)
+            cloudy: {
+                ids: ['300', '301', '302'],
+                color: 'text-slate-300',
+                glow: '0_0_15px_rgba(226,232,240,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 多云相关图标 (303-314)
+            partlyCloudy: {
+                ids: ['303', '304', '305', '306', '307', '308', '309', '310', '311', '312', '313', '314'],
+                color: 'text-white',
+                glow: '0_0_15px_rgba(255,255,255,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 雨天相关图标 (315-318, 350-351, 399)
+            rainy: {
+                ids: ['315', '316', '317', '318', '350', '351', '399'],
+                color: 'text-blue-300',
+                glow: '0_0_15px_rgba(147,197,253,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 雪天相关图标 (400-407, 409-410, 456-457, 499)
+            snowy: {
+                ids: ['400', '401', '402', '403', '404', '405', '406', '407', '409', '410', '456', '457', '499'],
+                color: 'text-cyan-200',
+                glow: '0_0_15px_rgba(165,243,252,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 雷暴相关图标 (500-515)
+            thunderstorm: {
+                ids: ['500', '501', '502', '503', '504', '507', '508', '509', '510', '511', '512', '513', '514', '515'],
+                color: 'text-purple-300',
+                glow: '0_0_15px_rgba(216,180,254,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 雾相关图标 (800-807)
+            foggy: {
+                ids: ['800', '801', '802', '803', '804', '805', '806', '807'],
+                color: 'text-gray-300',
+                glow: '0_0_15px_rgba(229,231,235,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            },
+            // 寒冷相关图标 (900-901)
+            cold: {
+                ids: ['900', '901'],
+                color: 'text-blue-200',
+                glow: '0_0_15px_rgba(191,219,254,0.8)',
+                outline: '0_0_2px_rgba(0,0,0,0.5)'
+            }
+        };
+
+        // 查找匹配的天气类型
+        const weatherType = Object.values(weatherColorMap).find(type => type.ids.includes(iconId));
+
+        if (weatherType) {
+            return `${weatherType.color} drop-shadow-[${weatherType.glow}] drop-shadow-[${weatherType.outline}]`;
+        }
+
         // 默认颜色
         console.log('未匹配到图标类型，使用默认颜色');
-        return 'text-white';
+        return 'text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] drop-shadow-[0_0_2px_rgba(0,0,0,0.5)]';
     };
-
-    // 保留原函数用于向后兼容
-    const getColorForWeatherType = (weatherType) => {
-        // 转换为小写以便匹配
-        const type = weatherType.toLowerCase();
-
-        // 晴天相关
-        if (type.includes('晴')) return 'text-yellow-400';
-        // 阴天相关
-        if (type.includes('阴')) return 'text-slate-500';
-        // 多云相关
-        if (type.includes('云')) return 'text-slate-300';
-        // 雨天相关
-        if (type.includes('雨')) return 'text-blue-400';
-        // 雪天相关
-        if (type.includes('雪')) return 'text-cyan-300';
-        // 雷暴相关（同时包含雷和暴）
-        if (type.includes('雷') && type.includes('暴')) return 'text-purple-400';
-        // 暴雨相关（只包含暴和雨）
-        if (type.includes('暴') && type.includes('雨')) return 'text-blue-400';
-        // 雾相关
-        if (type.includes('雾')) return 'text-slate-400';
-        // 默认颜色
-        return 'text-white';
-    };
-
-    // 注意：此函数现在根据天气类型返回固定颜色，
-    // 与实际天气无关，只与图标代表的天气类型相关
 
     // --- NETWORK SPEED LIMIT FUNCTIONS ---
     // 切换限速设置的显示/隐藏
@@ -417,6 +440,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 全局变量，保持磁盘显示模式状态
     let diskDisplayMode = 'summary'; // 'summary' 或 'detailed'
+
+    // 全局磁盘切换事件监听，只绑定一次
+    document.addEventListener('click', (e) => {
+        const toggleBtn = e.target.closest('#diskToggleBtn');
+        if (toggleBtn) {
+            diskDisplayMode = diskDisplayMode === 'summary' ? 'detailed' : 'summary';
+            updateSystemInfo(); // 重新渲染系统信息
+        }
+    });
 
     async function updateSystemInfo() {
         try {
@@ -846,8 +878,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 const errorResult = await response.json();
                 throw new Error(errorResult.error || `HTTP error! status: ${response.status}`);
             }
-            alert('设置已保存！页面将重新加载以应用更改。');
-            location.reload();
+            const changedSettings = [];
+            
+            // 检查各项设置是否有变化
+            if (newConfig.siteTitle !== currentConfig.siteTitle) {
+                document.title = newConfig.siteTitle;
+                changedSettings.push('网站标题');
+            }
+            
+            if (JSON.stringify(newConfig.navItems) !== JSON.stringify(currentConfig.navItems)) {
+                renderNavItems(newConfig.navItems);
+                changedSettings.push('导航项');
+            }
+            
+            if (JSON.stringify(newConfig.weather) !== JSON.stringify(currentConfig.weather)) {
+                renderWeather(newConfig.weather.cities);
+                changedSettings.push('天气设置');
+            }
+            
+            if (JSON.stringify(newConfig.background) !== JSON.stringify(currentConfig.background)) {
+                applyBackground(newConfig.background);
+                changedSettings.push('背景设置');
+            }
+            
+            if (JSON.stringify(newConfig.search) !== JSON.stringify(currentConfig.search)) {
+                populateSearch(newConfig.search);
+                changedSettings.push('搜索引擎设置');
+            }
+
+            if (newPassword) {
+                changedSettings.push('密码');
+            }
+
+            // 更新当前配置
+            currentConfig = newConfig;
+
+            // 根据修改的内容显示不同的提示
+            const message = changedSettings.length > 0 
+                ? `已保存更改：${changedSettings.join('、')}` 
+                : '设置已保存，但没有发生更改';
+                
+            // 使用自定义确认对话框
+            showConfirmDialog('设置已保存', message, '关闭设置', '继续编辑', (confirmed) => {
+                if (confirmed) {
+                    settingsModal.classList.add('hidden');
+                }
+            });
+            
+            // 重新获取最新配置
+            const updatedConfig = await fetch('/api/config').then(res => res.json());
+            currentConfig = updatedConfig; // 更新当前配置
+            configCache = updatedConfig; // 更新缓存的配置
+            configCacheTime = Date.now(); // 更新缓存时间
         } catch (error) {
             console.error("保存设置失败:", error);
             alert(`保存设置失败: ${error.message}`);
@@ -906,6 +988,39 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
         iconPickerModal.classList.add('hidden');
         activeIconForm = null;
+    }
+
+    // --- CUSTOM DIALOG ---
+    const confirmDialog = document.getElementById('confirm-dialog');
+    const confirmDialogTitle = document.getElementById('confirm-dialog-title');
+    const confirmDialogMessage = document.getElementById('confirm-dialog-message');
+    const confirmDialogConfirm = document.getElementById('confirm-dialog-confirm');
+    const confirmDialogCancel = document.getElementById('confirm-dialog-cancel');
+
+    function showConfirmDialog(title, message, confirmText, cancelText, callback) {
+        confirmDialogTitle.textContent = title;
+        confirmDialogMessage.textContent = message;
+        confirmDialogConfirm.textContent = confirmText;
+        confirmDialogCancel.textContent = cancelText;
+        
+        confirmDialog.classList.remove('hidden');
+        
+        const handleConfirm = () => {
+            confirmDialog.classList.add('hidden');
+            confirmDialogConfirm.removeEventListener('click', handleConfirm);
+            confirmDialogCancel.removeEventListener('click', handleCancel);
+            callback(true);
+        };
+        
+        const handleCancel = () => {
+            confirmDialog.classList.add('hidden');
+            confirmDialogConfirm.removeEventListener('click', handleConfirm);
+            confirmDialogCancel.removeEventListener('click', handleCancel);
+            callback(false);
+        };
+        
+        confirmDialogConfirm.addEventListener('click', handleConfirm);
+        confirmDialogCancel.addEventListener('click', handleCancel);
     }
 
     // --- EVENT LISTENERS ---
@@ -1065,33 +1180,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
     settingsModal.addEventListener('change', async (e) => {
         const target = e.target;
+
+        // 图标上传逻辑
         if (target.classList.contains('nav-icon-upload') && target.files[0]) {
             const formData = new FormData();
             formData.append('icon', target.files[0]);
+            
+            const container = target.closest('.p-2');
+            const iconInput = container?.querySelector('.nav-icon');
+            const iconPreview = container?.querySelector('.icon-preview');
+
+            if (!iconInput || !iconPreview) {
+                alert('无法找到对应的图标元素进行更新。');
+                return;
+            }
+
             try {
                 const response = await fetch('/api/upload/icon', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
-                selectIcon(result.filePath);
-            } catch (error) { alert('图标上传失败！'); }
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP 错误! 状态: ${response.status}`);
+                }
+                
+                iconInput.value = result.filePath;
+                iconPreview.innerHTML = getIconHtml(result.filePath);
+                lucide.createIcons();
+
+                if (!iconPickerModal.classList.contains('hidden')) {
+                     iconPickerModal.classList.add('hidden');
+                     activeIconForm = null;
+                }
+
+            } catch (error) {
+                alert(`图标上传失败！\n\n原因: ${error.message}`);
+            }
         }
+
+        // 背景图片上传逻辑
         if (target.id === 'bg-upload-input' && target.files[0]) {
             const formData = new FormData();
             formData.append('background', target.files[0]);
             try {
                 const response = await fetch('/api/upload/background', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP 错误! 状态: ${response.status}`);
+                }
                 bgUploadPath.textContent = result.filePath;
-                // FIX: Automatically select the 'upload' radio button and update UI
                 const uploadRadio = backgroundSettingsContainer.querySelector('input[name="bg-type"][value="upload"]');
                 if (uploadRadio) {
                     uploadRadio.checked = true;
                     updateBgSettingsVisibility();
                 }
-            } catch (error) { alert('背景上传失败！'); }
+            } catch (error) {
+                alert(`背景上传失败！\n\n原因: ${error.message}`);
+            }
         }
     });
+
+    // 更新时间日期显示
+    function updateDateTime() {
+        const timeElem = document.getElementById('time');
+        const dateElem = document.getElementById('date');
+        const now = new Date();
+
+        // 更新时间
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        timeElem.textContent = `${hours}:${minutes}`;
+
+        // 更新日期
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const date = String(now.getDate()).padStart(2, '0');
+        dateElem.textContent = `${month}月${date}日`;
+    }
 
     // 优化初始化过程，延迟加载非关键资源
     function init() {
@@ -1109,6 +1271,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 populateIconPicker();
             }, 1000);
         });
+        
+        // 初始化时间日期显示
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
         setInterval(updateSystemInfo, 5000);
     }
 

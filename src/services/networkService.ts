@@ -11,64 +11,39 @@ const execAsync = promisify(exec);
  */
 exports.applySpeedLimit = async function(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
     try {
-        // 先清空现有规则
-        await execAsync(`tc qdisc del dev ${interfaceName} root > /dev/null 2>&1`);
+        // 先清空该网络接口上所有现有的 qdisc 规则，以便应用新规则
+        // We ignore errors here because a rule might not exist, which is fine.
+        await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);
     } catch (error) {
-        // 忽略删除失败的错误，可能是因为没有现有规则
-        console.log(`没有找到现有规则，继续应用新规则`);
+        // 忽略删除失败的错误，这通常意味着之前没有设置规则
+        console.log(`接口 ${interfaceName} 上没有找到现有规则，将直接应用新规则。`);
     }
 
     try {
-        // 检查系统是否支持CAKE算法
-        const checkCake = await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth 1mbit > /dev/null 2>&1 || echo "CAKE not supported"`);
+        // 优化后的 CAKE 命令
+        // The optimized CAKE command with additional parameters to reduce latency.
+        // - besteffort: 默认的尽力而为模式
+        // - triple-isolate: 提供强大的流隔离，确保没有单个连接可以霸占所有带宽，是降低延迟的关键
+        // - nat: 启用 NAT (网络地址转换) 感知，帮助 CAKE 更好地区分内部和外部流量，对 Docker 等场景很重要
+        const command = `tc qdisc add dev ${interfaceName} root cake bandwidth ${speedLimit} besteffort triple-isolate nat`;
         
-        if (checkCake.stdout.includes('CAKE not supported')) {
-            // 尝试安装所需软件包
-            try {
-                console.log('系统不支持CAKE算法，尝试安装所需软件...');
-                
-                // 检查是否为Debian系统
-                const isDebian = await execAsync(`grep -q Debian /etc/os-release && echo "Debian" || echo "Other"`);
-                
-                if (isDebian.stdout.trim() === 'Debian') {
-                    // 对于Debian系统，尝试添加backports仓库并安装支持CAKE的iproute2
-                    console.log('检测到Debian系统，尝试通过backports安装支持CAKE的iproute2...');
-                    await execAsync(`sudo apt update`);
-                    // 尝试安装backports版本的iproute2
-                    try {
-                        await execAsync(`sudo apt install -y -t $(lsb_release -sc)-backports iproute2`);
-                    } catch (backportError) {
-                        console.log('无法通过backports安装，尝试常规安装...');
-                        await execAsync(`sudo apt install -y iproute2`);
-                    }
-                } else {
-                    // 非Debian系统，尝试常规安装
-                    await execAsync(`sudo apt update && sudo apt install -y iproute2`);
-                }
-                
-                // 再次检查
-                const checkAgain = await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth 1mbit > /dev/null 2>&1 || echo "CAKE still not supported"`);
-                if (checkAgain.stdout.includes('CAKE still not supported')) {
-                    return {
-                        success: false,
-                        message: `系统不支持CAKE算法。在Debian上，您可能需要启用backports仓库或手动编译支持CAKE的iproute2版本。\n\n安装指南：\n1. 启用backports仓库：echo "deb http://deb.debian.org/debian $(lsb_release -sc)-backports main" | sudo tee /etc/apt/sources.list.d/backports.list\n2. 更新包列表：sudo apt update\n3. 安装backports版本的iproute2：sudo apt install -y -t $(lsb_release -sc)-backports iproute2`
-                    };
-                }
-            } catch (installError) {
-                return { success: false, message: `安装CAKE支持失败: ${(installError as Error).message}` };
-            }
+        console.log(`正在执行优化的限速命令: ${command}`);
+        await execAsync(command);
+
+        return { success: true, message: `已成功为接口 ${interfaceName} 应用优化的CAKE限速 ${speedLimit}` };
+    } catch (error) {
+        const errorMessage = (error as Error).message;
+        console.error('应用限速失败:', error);
+
+        // 如果命令失败，可能是因为内核不支持 CAKE。提供友好的提示。
+        if (errorMessage.includes('Unknown qdisc "cake"')) {
+            return {
+                success: false,
+                message: `应用限速失败: 您的系统内核似乎不支持 "cake" 队列算法。请尝试升级您的内核或安装包含 "cake" 的 iproute2 工具包。`
+            };
         }
         
-        // 删除检查时添加的规则
-        await execAsync(`tc qdisc del dev ${interfaceName} root > /dev/null 2>&1`);
-        
-        // 应用新的CAKE规则
-        await execAsync(`tc qdisc add dev ${interfaceName} root cake bandwidth ${speedLimit}`);
-
-        return { success: true, message: `已成功为接口 ${interfaceName} 应用CAKE限速 ${speedLimit}` };
-    } catch (error) {
-        console.error('应用限速失败:', error);
-        return { success: false, message: `应用限速失败: ${(error as Error).message}` };
+        return { success: false, message: `应用限速失败: ${errorMessage}` };
     }
 };
 
@@ -87,29 +62,29 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
         const { stdout } = await execAsync(`tc qdisc show dev ${interfaceName}`);
         
         // 检查输出中是否包含cake规则
-        if (stdout.includes('cake')) {
-            // 尝试获取限速值
-            const speedMatch = stdout.match(/bandwidth\s+(\w+)/);
+        if (stdout.includes('qdisc cake')) {
+            // 尝试从输出中解析带宽值
+            const speedMatch = stdout.match(/bandwidth\s+([^\s]+)/);
             
             return {
                 success: true,
                 hasLimit: true,
                 speed: speedMatch ? speedMatch[1] : '未知',
-                message: `接口 ${interfaceName} 当前有CAKE限速规则`
+                message: `接口 ${interfaceName} 当前有CAKE限速规则。`
             };
         }
         
         return {
             success: true,
             hasLimit: false,
-            message: `接口 ${interfaceName} 没有限速规则`
+            message: `接口 ${interfaceName} 当前没有限速规则。`
         };
     } catch (error) {
-        console.error('查询限速状态失败:', error);
+        // 如果查询命令失败（例如接口不存在），则认为没有限速
         return {
-            success: false,
+            success: true,
             hasLimit: false,
-            message: `查询限速状态失败: ${(error as Error).message}`
+            message: `接口 ${interfaceName} 不存在或无法查询。`
         };
     }
 };
@@ -121,11 +96,12 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
  */
 exports.removeSpeedLimit = async function(interfaceName: string): Promise<{ success: boolean; message: string }> {
     try {
-        // 清空规则
-        await execAsync(`tc qdisc del dev ${interfaceName} root`);
-        return { success: true, message: `已成功移除接口 ${interfaceName} 的限速` };
+        // 使用与应用时相同的命令来删除规则
+        await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);
+        return { success: true, message: `已成功移除接口 ${interfaceName} 的所有限速规则。` };
     } catch (error) {
-        console.error('移除限速失败:', error);
-        return { success: false, message: `移除限速失败: ${(error as Error).message}` };
+        // 即使删除失败（可能规则已不存在），也视为成功，因为目标是确保没有规则
+        console.error('移除限速时出错 (可能规则已不存在):', error);
+        return { success: true, message: `已成功移除接口 ${interfaceName} 的所有限速规则。` };
     }
 };

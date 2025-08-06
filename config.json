@@ -1,5 +1,47 @@
 {
   "siteTitle": "iPanel面板",
+  "nav": [
+    {
+      "name": "Nas",
+      "url": "https://www.itjl.top:91",
+      "requiresPassword": false,
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" data-lucide=\"server\" class=\"lucide lucide-server\"><rect width=\"20\" height=\"8\" x=\"2\" y=\"2\" rx=\"2\" ry=\"2\"></rect><rect width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\" ry=\"2\"></rect><line x1=\"6\" x2=\"6.01\" y1=\"6\" y2=\"6\"></line><line x1=\"6\" x2=\"6.01\" y1=\"18\" y2=\"18\"></line></svg>"
+    },
+    {
+      "name": "路由器",
+      "url": "https://router.itjl.top:91",
+      "requiresPassword": false,
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" data-lucide=\"router\" class=\"lucide lucide-router\"><rect width=\"20\" height=\"8\" x=\"2\" y=\"14\" rx=\"2\"></rect><path d=\"M6.01 18H6\"></path><path d=\"M10.01 18H10\"></path><path d=\"M15 10v4\"></path><path d=\"M17.84 7.17a4 4 0 0 0-5.66 0\"></path><path d=\"M20.66 4.34a8 8 0 0 0-11.31 0\"></path></svg>"
+    },
+    {
+      "name": "图书库",
+      "url": "https://book.itjl.top:91",
+      "requiresPassword": false,
+      "icon": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" data-lucide=\"bookmark\" class=\"lucide lucide-bookmark\"><path d=\"m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z\"></path></svg>"
+    }
+  ],
+  "weather": {
+    "apiKey": "c72cea469bb14f8d87135353fb548c6e",
+    "cities": [
+      "北京",
+      "宣化",
+      "康保"
+    ]
+  },
+  "background": {
+    "type": "bing"
+  },
+  "search": {
+    "engines": [],
+    "defaultEngine": "Google"
+  },
+  "network": {
+    "speedLimit": {
+      "enabled": false,
+      "interface": "eth0",
+      "value": ""
+    }
+  },
   "navItems": [
     {
       "name": "路由器",
@@ -52,20 +94,5 @@
       "icon": "prebuilt:portainer"
     }
   ],
-  "weather": {
-    "cities": [
-      "北京",
-      "宣化",
-      "康保"
-    ],
-    "apiKey": "c72cea469bb14f8d87135353fb548c6e"
-  },
-  "search": {
-    "engines": [],
-    "defaultEngine": "Google"
-  },
-  "background": {
-    "type": "bing",
-    "value": ""
-  }
+  "hasPassword": false
 }

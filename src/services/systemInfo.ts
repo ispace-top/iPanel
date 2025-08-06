@@ -20,13 +20,15 @@ export async function getSystemInfo() {
 
         // 并行获取所有其他数据以提高性能
         // 添加获取网络接口信息以获取IP地址
-        const [cpuData, memData, fsData, netData, temp, networkInterfaces] = await Promise.all([
+        const [cpuData, memData, fsData, netData, temp, networkInterfaces, cpuSpeed, diskLayout] = await Promise.all([
             si.cpu(),
             si.mem(),
             si.fsSize(),
             si.networkStats(),
             si.cpuTemperature(),
             si.networkInterfaces(),
+            si.cpuCurrentSpeed(),
+            si.diskLayout()
         ]);
 
         // 获取CPU型号的辅助函数，支持ARM架构
@@ -75,31 +77,62 @@ export async function getSystemInfo() {
                 model: getCpuModel(), // 使用辅助函数获取CPU型号，支持ARM架构
                 rawBrand: cpuData.brand, // 添加原始品牌数据用于调试
                 cores: cpuData.cores,
-                speed: cpuData.speed,
-                load: load.currentLoad,
-                temperature: temp.main,
+                physicalCores: cpuData.physicalCores,
+                speed: cpuData.speed, // 基础频率
+                speedMin: cpuData.speedMin,
+                speedMax: cpuData.speedMax,
+                currentSpeed: cpuSpeed.avg || cpuSpeed.cores?.[0] || cpuData.speed, // 当前运行频率
+                usage: load.currentLoad,
+                temperature: temp.main || temp.max || 0,
                 fanSpeed: fansData[0]?.speed || 0, // 重新添加风扇转速 (Re-added fan speed)
             },
-            mem: {
+            memory: {
                 total: memData.total,
                 used: memData.used,
                 free: memData.free,
                 usage: (memData.used / memData.total) * 100
             },
-            // 为 'd' 参数添加了显式类型
-            // Added explicit type for parameter 'd'
-            fs: fsData.map((d: si.Systeminformation.FsSizeData) => ({
-                fs: d.fs,
-                type: d.type,
-                size: d.size,
-                used: d.used,
-                available: d.available,
-                use: d.use
+            // 物理磁盘信息（基于实际硬件）
+            physicalDisks: diskLayout.map((disk: any) => ({
+                name: disk.name || disk.device,
+                type: disk.type,
+                vendor: disk.vendor,
+                size: disk.size,
+                interfaceType: disk.interfaceType
             })),
-            net: {
-                iface: netStat?.iface,
-                rx_sec: netStat?.rx_sec,
-                tx_sec: netStat?.tx_sec,
+            // 磁盘分区使用情况
+            diskPartitions: fsData
+                .filter((d: si.Systeminformation.FsSizeData) => {
+                    // 排除虚拟文件系统和特殊分区
+                    const excludeTypes = ['devfs', 'tmpfs', 'sysfs', 'proc', 'squashfs', 'overlay'];
+                    const excludeMounts = ['/dev', '/sys', '/proc', '/run', '/boot/efi', '/snap'];
+                    
+                    // 排除特定类型的文件系统
+                    if (excludeTypes.includes(d.type.toLowerCase())) {
+                        return false;
+                    }
+                    
+                    // 排除特定挂载点
+                    if (excludeMounts.some(mount => d.mount.startsWith(mount))) {
+                        return false;
+                    }
+                    
+                    // 只保留大小大于0的磁盘
+                    return d.size > 0;
+                })
+                .map((d: si.Systeminformation.FsSizeData) => ({
+                    mount: d.mount,
+                    fs: d.fs,
+                    type: d.type,
+                    total: d.size,
+                    used: d.used,
+                    available: d.available,
+                    use: d.use
+                })),
+            network: netData.map((n: si.Systeminformation.NetworkStatsData) => ({
+                interface: n.iface,
+                sent: n.tx_sec || 0,
+                received: n.rx_sec || 0,
                 ip: (() => {
                     try {
                         // 使用Node.js内置os模块获取网络接口
@@ -122,7 +155,7 @@ export async function getSystemInfo() {
                     console.warn('No IPv4 address found on non-loopback interfaces');
                     return '未知IP';
                 })()
-            },
+            })),
             time: {
                 current: si.time().current,
                 uptime: si.time().uptime,

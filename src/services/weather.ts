@@ -57,13 +57,15 @@ export async function getWeather(cityName: string) {
             now: {
                 temp: now.temp,
                 text: now.text,
-                icon: `https://icons.qweather.com/assets/icons/${now.icon}.svg`
+                icon: now.icon, // 添加图标ID
+                iconId: now.icon.replace(/\D/g, '') // 提取纯数字ID
             },
             forecast: forecast.map((day: any) => ({
                 date: new Date(day.fxDate).toLocaleString('zh-CN', { weekday: 'short' }),
                 temp: `${day.tempMin}° / ${day.tempMax}°`,
                 description: day.textDay,
-                icon: `https://icons.qweather.com/assets/icons/${day.iconDay}.svg`
+                icon: day.iconDay, // 添加图标ID
+                iconId: day.iconDay.replace(/\D/g, '') // 提取纯数字ID
             }))
         };
     } catch (error) {

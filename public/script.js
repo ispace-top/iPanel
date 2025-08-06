@@ -356,6 +356,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let fallbackUrl = 'https://source.unsplash.com/random/1920x1080?nature,scenery';
         let bgUrl = fallbackUrl;
 
+        // 先设置一个轻量级的背景色，避免页面空白
+        document.body.style.backgroundColor = '#1e293b';
+
         if (!bgConfig) {
             document.body.style.backgroundImage = `url('${bgUrl}')`;
             return;
@@ -825,8 +828,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const bgType = backgroundSettingsContainer.querySelector('input[name="bg-type"]:checked')?.value;
         let bgValue = '';
-        if (bgType === 'url') bgValue = bgUrlInput.value;
-        else if (bgType === 'upload') bgValue = bgUploadPath.textContent;
+        if (bgType === 'url') {
+            bgValue = bgUrlInput.value;
+        } else if (bgType === 'upload') {
+            bgValue = bgUploadPath.textContent;
+        }
 
         const newConfig = { siteTitle, navItems, weather: { cities, apiKey }, search, background: { type: bgType, value: bgValue } };
 
@@ -1077,6 +1083,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const result = await response.json();
                 bgUploadPath.textContent = result.filePath;
+                // FIX: Automatically select the 'upload' radio button and update UI
+                const uploadRadio = backgroundSettingsContainer.querySelector('input[name="bg-type"][value="upload"]');
+                if (uploadRadio) {
+                    uploadRadio.checked = true;
+                    updateBgSettingsVisibility();
+                }
             } catch (error) { alert('背景上传失败！'); }
         }
     });
@@ -1098,64 +1110,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 1000);
         });
         setInterval(updateSystemInfo, 5000);
-    }
-
-    // 优化背景图片加载
-    async function applyBackground(bgConfig) {
-        let fallbackUrl = 'https://source.unsplash.com/random/1920x1080?nature,scenery';
-        let bgUrl = fallbackUrl;
-
-        // 先设置一个轻量级的背景色，避免页面空白
-        document.body.style.backgroundColor = '#1e293b';
-
-        if (!bgConfig) {
-            // 使用IntersectionObserver延迟加载背景图片
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        document.body.style.backgroundImage = `url('${bgUrl}')`;
-                        observer.disconnect();
-                    }
-                });
-            });
-            observer.observe(document.body);
-            return;
-        }
-
-        try {
-            switch (bgConfig.type) {
-                case 'bing':
-                    const response = await fetch('/api/bing-wallpaper');
-                    if (!response.ok) throw new Error('从后端获取壁纸失败');
-                    const data = await response.json();
-                    bgUrl = data.url;
-                    break;
-                case 'url':
-                    if (bgConfig.value) bgUrl = bgConfig.value;
-                    break;
-                case 'upload':
-                    if (bgConfig.value) bgUrl = bgConfig.value;
-                    break;
-                default:
-                    break;
-            }
-
-            // 使用IntersectionObserver延迟加载背景图片
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        document.body.style.backgroundImage = `url('${bgUrl}')`;
-                        observer.disconnect();
-                    }
-                });
-            });
-            observer.observe(document.body);
-
-        } catch (error) {
-            console.error("应用背景失败，将使用备用背景:", error);
-            bgUrl = fallbackUrl;
-            document.body.style.backgroundImage = `url('${bgUrl}')`;
-        }
     }
 
     init();

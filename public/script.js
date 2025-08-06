@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // 使用DocumentFragment优化DOM操作
             renderNavItems(config.navItems || []);
             populateSearch(config.search);
-            populateSettingsModal(config);
+            // 注意：不再在这里调用 populateSettingsModal
 
         } catch (error) {
             console.error("获取或解析配置文件失败:", error);
@@ -665,6 +665,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 优化DOM操作，减少重绘和回流
         siteTitleInput.value = config.siteTitle || 'NAS 控制台';
 
+        // ***** FIX: 清空旧内容 *****
+        navSettingsContainer.innerHTML = '';
+        weatherSettingsContainer.innerHTML = '';
+        searchSettingsContainer.innerHTML = '';
+        // ***** FIX END *****
+
         // 使用DocumentFragment批量添加导航项
         const navFragment = document.createDocumentFragment();
         (config.navItems || []).forEach(item => {
@@ -929,11 +935,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 延迟初始化设置弹窗
     function initSettingsModal(config) {
+        // *** FIX: 移动 populateSettingsModal 调用到这里 ***
+        populateSettingsModal(config);
         if (settingsModalLoaded) return;
         settingsModalLoaded = true;
-
-        populateSettingsModal(config);
-        // 这里可以添加其他初始化逻辑
+        // 这里可以添加其他一次性初始化逻辑
     }
 
     settingsBtn.addEventListener('click', async () => {
@@ -989,6 +995,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await response.json();
         if (result.success) {
             closePasswordModal();
+            // *** FIX: 在验证成功后调用 initSettingsModal ***
+            initSettingsModal(currentConfig);
             settingsModal.classList.remove('hidden');
         } else {
             passwordError.textContent = '密码错误！';

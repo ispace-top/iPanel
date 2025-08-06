@@ -29,7 +29,8 @@
     ]
   },
   "background": {
-    "type": "bing"
+    "type": "upload",
+    "value": "/uploads/background-1754481046867-564209078.jpg"
   },
   "search": {
     "engines": [],

@@ -33,6 +33,14 @@ export function initSettings() {
             
             if (bgType === 'url' && config.background.value) {
                 document.getElementById('bg-url-input').value = config.background.value;
+            } else if (bgType === 'upload' && config.background.value) {
+                // 显示已上传的文件路径信息
+                const bgUploadPath = document.getElementById('bg-upload-path');
+                if (bgUploadPath) {
+                    // 从完整路径中提取文件名
+                    const fileName = config.background.value.split('/').pop() || config.background.value;
+                    bgUploadPath.textContent = fileName;
+                }
             }
         }
         
@@ -171,8 +179,12 @@ export function initSettings() {
         
         const bgType = bgTypeInput ? bgTypeInput.value : 'bing';
         data.background = { type: bgType };
+        
         if (bgType === 'url' && bgUrlInput) {
             data.background.value = bgUrlInput.value;
+        } else if (bgType === 'upload') {
+            // 对于上传类型，从 currentConfig 中获取已上传的文件路径
+            data.background.value = currentConfig.background?.value || '';
         }
         
         // 导航设置
@@ -273,6 +285,66 @@ export function initSettings() {
             currentConfig.search.engines = currentConfig.search.engines || [];
             currentConfig.search.engines.push({ name: '', url: '', custom: true });
             renderSearchSettings(currentConfig.search.engines);
+        });
+
+        // 背景上传相关事件监听器
+        document.getElementById('bg-upload-btn')?.addEventListener('click', () => {
+            const bgUploadInput = document.getElementById('bg-upload-input');
+            if (bgUploadInput) {
+                bgUploadInput.click();
+            }
+        });
+
+        // 背景文件选择事件监听器
+        document.getElementById('bg-upload-input')?.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const bgUploadPath = document.getElementById('bg-upload-path');
+            
+            try {
+                const formData = new FormData();
+                formData.append('background', file);
+                
+                const response = await fetch('/api/upload/background', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || `HTTP 错误! 状态: ${response.status}`);
+                }
+                
+                // 更新显示的文件路径
+                if (bgUploadPath) {
+                    bgUploadPath.textContent = file.name;
+                }
+                
+                // 自动选择上传选项
+                const uploadRadio = document.querySelector('input[name="bg-type"][value="upload"]');
+                if (uploadRadio) {
+                    uploadRadio.checked = true;
+                    // 触发背景类型切换事件
+                    uploadRadio.dispatchEvent(new Event('change'));
+                }
+                
+                // 更新配置中的背景设置
+                currentConfig.background = {
+                    type: 'upload',
+                    value: result.filePath
+                };
+                
+                console.log('背景上传成功:', result.filePath);
+                
+            } catch (error) {
+                console.error('背景上传失败:', error);
+                if (bgUploadPath) {
+                    bgUploadPath.textContent = '上传失败';
+                }
+                window.showConfirmDialog('上传失败', `背景上传失败：${error.message}`);
+            }
         });
     }
     

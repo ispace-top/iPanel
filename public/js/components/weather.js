@@ -132,28 +132,33 @@ export function initWeather() {
                         </div>
                     `;
                 } else {
-                    // 次要城市 - 只显示3行天气信息
+                    // 次要城市 - 城市名行与预报行格式保持一致，城市名更突出
                     return `
                         <div class="weather-item border-b border-white/10 last:border-b-0 pb-3 last:pb-0 mb-3 last:mb-0">
                             ${weather.forecast && weather.forecast.length > 0 ? `
                                 <div class="space-y-1">
-                                    <div class="grid grid-cols-4 gap-1 items-center text-xs">
-                                        <span class="text-slate-200 text-center font-bold">${weather.city}</span>
-                                        <span class="text-sm text-center">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
-                                        <span class="text-slate-100 font-mono text-center">${weather.now.temp}°</span>
-                                        <span class="text-slate-200 text-center truncate text-[10px]">${weather.now.text}</span>
+                                    <div class="grid grid-cols-4 gap-2 items-center text-xs">
+                                        <span class="text-white text-center font-bold text-sm bg-white/10 px-2 py-1 rounded-md">${weather.city}</span>
+                                        <span class="text-lg text-center">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
+                                        <span class="text-slate-100 font-mono text-center">${weather.now.tempRange || weather.now.temp + '°'}</span>
+                                        <span class="text-slate-200 text-center truncate">${weather.now.text}</span>
                                     </div>
                                     ${weather.forecast.slice(1, 3).map(day => `
-                                        <div class="grid grid-cols-4 gap-1 items-center text-xs">
+                                        <div class="grid grid-cols-4 gap-2 items-center text-xs">
                                             <span class="text-slate-200 text-center">${day.date}</span>
-                                            <span class="text-sm text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
+                                            <span class="text-lg text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
                                             <span class="text-slate-100 font-mono text-center">${day.temp}</span>
-                                            <span class="text-slate-200 text-center truncate text-[10px]">${day.description}</span>
+                                            <span class="text-slate-200 text-center truncate">${day.description}</span>
                                         </div>
                                     `).join('')}
                                 </div>
                             ` : `
-                                <div class="text-xs text-slate-400">${weather.now.text}</div>
+                                <div class="grid grid-cols-4 gap-2 items-center text-xs">
+                                    <span class="text-white text-center font-bold text-sm bg-white/10 px-2 py-1 rounded-md">${weather.city}</span>
+                                    <span class="text-lg text-center">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
+                                    <span class="text-slate-100 font-mono text-center">${weather.now.tempRange || weather.now.temp + '°'}</span>
+                                    <span class="text-slate-200 text-center truncate">${weather.now.text}</span>
+                                </div>
                             `}
                         </div>
                     `;

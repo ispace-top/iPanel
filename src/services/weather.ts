@@ -58,7 +58,9 @@ export async function getWeather(cityName: string) {
                 temp: now.temp,
                 text: now.text,
                 icon: now.icon, // 添加图标ID
-                iconId: now.icon.replace(/\D/g, '') // 提取纯数字ID
+                iconId: now.icon.replace(/\D/g, ''), // 提取纯数字ID
+                // 添加今日温度区间（从今天的预报数据中获取）
+                tempRange: forecast.length > 0 ? `${forecast[0].tempMin}° / ${forecast[0].tempMax}°` : `${now.temp}°`
             },
             forecast: forecast.map((day: any) => ({
                 date: new Date(day.fxDate).toLocaleString('zh-CN', { weekday: 'short' }),

@@ -4,14 +4,14 @@ import { getConfig, saveConfig, verifyPassword, hasPassword } from './services/c
 import { getSystemInfo } from './services/systemInfo';
 import { getWeather } from './services/weather';
 import { getBingWallpaper } from './services/wallpaper';
-import { applySpeedLimit, removeSpeedLimit, getSpeedLimitStatus } from './services/networkService';
+import { applySpeedLimit, removeSpeedLimit, getSpeedLimitStatus, startSmartQoS, stopSmartQoS, getSmartQoSStatus, getQoSTemplates, getRecommendedQoSConfig, detectNetworkPerformance, getNetworkInterfaces } from './services/networkService';
 
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
 const app = express();
-const port = 3500;
+const port = 9257;
 
 app.use(cors());
 app.use(express.json());
@@ -157,6 +157,54 @@ app.get('/api/network/speed-limit', async (req, res) => {
     }
     const result = await getSpeedLimitStatus(interfaceName);
     res.json(result);
+});
+
+// 智能QoS API
+app.post('/api/network/smart-qos/start', async (req, res) => {
+    const config = req.body;
+    if (!config.interface) {
+        return res.status(400).json({ success: false, message: '网络接口名称是必需的' });
+    }
+    const result = await startSmartQoS(config);
+    res.json(result);
+});
+
+app.post('/api/network/smart-qos/stop', async (req, res) => {
+    const result = await stopSmartQoS();
+    res.json(result);
+});
+
+app.get('/api/network/smart-qos/status', async (req, res) => {
+    const result = await getSmartQoSStatus();
+    res.json(result);
+});
+
+app.get('/api/network/qos-templates', async (req, res) => {
+    const templates = getQoSTemplates();
+    res.json(templates);
+});
+
+app.post('/api/network/qos-recommend', async (req, res) => {
+    const networkInfo = req.body;
+    if (!networkInfo.downloadSpeed || !networkInfo.uploadSpeed) {
+        return res.status(400).json({ success: false, message: '需要提供下载和上传速度信息' });
+    }
+    const recommendation = getRecommendedQoSConfig(networkInfo);
+    res.json(recommendation);
+});
+
+app.get('/api/network/interfaces', async (req, res) => {
+    const interfaces = await getNetworkInterfaces();
+    res.json(interfaces);
+});
+
+app.get('/api/network/performance', async (req, res) => {
+    const interfaceName = req.query.interface as string;
+    if (!interfaceName) {
+        return res.status(400).json({ success: false, message: '网络接口名称是必需的' });
+    }
+    const performance = await detectNetworkPerformance(interfaceName);
+    res.json(performance);
 });
 
 

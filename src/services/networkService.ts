@@ -1,7 +1,12 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { SmartQoS, QoSConfig } from './smartQoS';
+import { QoSTemplates, QoSRecommendation } from './qosTemplates';
 
 const execAsync = promisify(exec);
+
+// 全局SmartQoS实例
+let smartQoSInstance: SmartQoS | null = null;
 
 /**
  * 应用网络限速设置
@@ -51,6 +56,112 @@ export async function applySpeedLimit(interfaceName: string, speedLimit: string)
 };
 
 /**
+ * 启动智能QoS
+ */
+export async function startSmartQoS(config: QoSConfig): Promise<{ success: boolean; message: string }> {
+    try {
+        // 停止现有实例
+        if (smartQoSInstance) {
+            await smartQoSInstance.stop();
+        }
+
+        // 创建新实例
+        smartQoSInstance = new SmartQoS(config);
+        const result = await smartQoSInstance.start();
+
+        return result;
+    } catch (error) {
+        return { success: false, message: `启动智能QoS失败: ${(error as Error).message}` };
+    }
+}
+
+/**
+ * 停止智能QoS
+ */
+export async function stopSmartQoS(): Promise<{ success: boolean; message: string }> {
+    try {
+        if (smartQoSInstance) {
+            const result = await smartQoSInstance.stop();
+            smartQoSInstance = null;
+            return result;
+        }
+        return { success: true, message: '智能QoS未在运行' };
+    } catch (error) {
+        return { success: false, message: `停止智能QoS失败: ${(error as Error).message}` };
+    }
+}
+
+/**
+ * 获取智能QoS状态
+ */
+export async function getSmartQoSStatus(): Promise<any> {
+    if (!smartQoSInstance) {
+        return { active: false, message: '智能QoS未启动' };
+    }
+    return await smartQoSInstance.getStatus();
+}
+
+/**
+ * 获取QoS模板列表
+ */
+export function getQoSTemplates(): Record<string, QoSConfig> {
+    return QoSTemplates;
+}
+
+/**
+ * 获取推荐的QoS配置
+ */
+export function getRecommendedQoSConfig(networkInfo: {
+    downloadSpeed: number;
+    uploadSpeed: number;
+    latency: number;
+    connectionType: 'fiber' | 'adsl' | 'cable' | 'wireless';
+    usage: 'home' | 'office' | 'server' | 'gaming';
+}): QoSConfig {
+    return QoSRecommendation.recommendConfig(networkInfo);
+}
+
+/**
+ * 检测网络性能
+ */
+export async function detectNetworkPerformance(interfaceName: string): Promise<{
+    downloadSpeed: number;
+    uploadSpeed: number;
+    latency: number;
+    packetLoss: number;
+}> {
+    const results = {
+        downloadSpeed: 0,
+        uploadSpeed: 0,
+        latency: 0,
+        packetLoss: 0
+    };
+
+    try {
+        // 测试延迟和丢包率
+        const pingResult = await execAsync(`ping -c 10 8.8.8.8 | tail -1`);
+        const pingMatch = pingResult.stdout.match(/(\d+\.?\d*)% packet loss/);
+        if (pingMatch) {
+            results.packetLoss = parseFloat(pingMatch[1]);
+        }
+
+        const latencyMatch = pingResult.stdout.match(/(\d+\.?\d*)\//);
+        if (latencyMatch) {
+            results.latency = parseFloat(latencyMatch[1]);
+        }
+
+        // 注意：实际的速度测试需要外部工具如speedtest-cli
+        // 这里提供一个基础实现框架
+        console.log('网络性能检测完成');
+        
+    } catch (error) {
+        console.error('网络性能检测失败:', error);
+    }
+
+    return results;
+}
+
+/**
  * 查询网络限速状态
  * @param interfaceName 网络接口名称 (如 eth0, wlan0)
  * @returns 限速状态信息
@@ -59,10 +170,24 @@ export async function getSpeedLimitStatus(interfaceName: string): Promise<{
     success: boolean; 
     hasLimit: boolean; 
     speed?: string; 
-    message: string 
+    message: string;
+    qosType?: 'simple' | 'smart';
 }> {
     try {
         const { stdout } = await execAsync(`tc qdisc show dev ${interfaceName}`);
+        
+        // 检查是否有智能QoS
+        if (smartQoSInstance) {
+            const smartStatus = await smartQoSInstance.getStatus();
+            if (smartStatus.active) {
+                return {
+                    success: true,
+                    hasLimit: true,
+                    message: `接口 ${interfaceName} 正在运行智能QoS`,
+                    qosType: 'smart'
+                };
+            }
+        }
         
         // 检查是否为 CAKE 规则
         if (stdout.includes('qdisc cake')) {
@@ -71,7 +196,8 @@ export async function getSpeedLimitStatus(interfaceName: string): Promise<{
                 success: true,
                 hasLimit: true,
                 speed: speedMatch ? speedMatch[1] : '未知',
-                message: `接口 ${interfaceName} 当前有 CAKE 限速规则。`
+                message: `接口 ${interfaceName} 当前有 CAKE 限速规则。`,
+                qosType: 'simple'
             };
         } 
         // 检查是否为 HTB + fq_codel 回退规则
@@ -82,7 +208,8 @@ export async function getSpeedLimitStatus(interfaceName: string): Promise<{
                 success: true,
                 hasLimit: true,
                 speed: speedMatch ? speedMatch[1].replace('bit', 'bit') : '未知', // 规范化单位
-                message: `接口 ${interfaceName} 当前有 fq_codel (HTB) 回退限速规则。`
+                message: `接口 ${interfaceName} 当前有 fq_codel (HTB) 回退限速规则。`,
+                qosType: 'simple'
             };
         }
         
@@ -107,6 +234,11 @@ export async function getSpeedLimitStatus(interfaceName: string): Promise<{
  */
 export async function removeSpeedLimit(interfaceName: string): Promise<{ success: boolean; message: string }> {
     try {
+        // 首先停止智能QoS
+        if (smartQoSInstance) {
+            await stopSmartQoS();
+        }
+
         // 这个命令可以移除 CAKE 或 HTB 根规则
         await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);
         return { success: true, message: `已成功移除接口 ${interfaceName} 的所有限速规则。` };
@@ -115,3 +247,16 @@ export async function removeSpeedLimit(interfaceName: string): Promise<{ success
         return { success: true, message: `已成功移除接口 ${interfaceName} 的所有限速规则。` };
     }
 };
+
+/**
+ * 获取网络接口列表
+ */
+export async function getNetworkInterfaces(): Promise<string[]> {
+    try {
+        const { stdout } = await execAsync(`ip link show | grep '^[0-9]' | awk -F': ' '{print $2}' | grep -v lo`);
+        return stdout.trim().split('\n').filter(iface => iface.length > 0);
+    } catch (error) {
+        console.error('获取网络接口失败:', error);
+        return ['eth0']; // 返回默认值
+    }
+}

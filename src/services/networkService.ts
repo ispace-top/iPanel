@@ -10,40 +10,43 @@ const execAsync = promisify(exec);
  * @returns 是否成功及消息
  */
 exports.applySpeedLimit = async function(interfaceName: string, speedLimit: string): Promise<{ success: boolean; message: string }> {
+    // 统一在函数开始时清空旧规则
     try {
-        // 先清空该网络接口上所有现有的 qdisc 规则，以便应用新规则
-        // We ignore errors here because a rule might not exist, which is fine.
         await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);
     } catch (error) {
-        // 忽略删除失败的错误，这通常意味着之前没有设置规则
         console.log(`接口 ${interfaceName} 上没有找到现有规则，将直接应用新规则。`);
     }
 
+    // 优先尝试使用 CAKE 算法
     try {
-        // 优化后的 CAKE 命令
-        // The optimized CAKE command with additional parameters to reduce latency.
-        // - besteffort: 默认的尽力而为模式
-        // - triple-isolate: 提供强大的流隔离，确保没有单个连接可以霸占所有带宽，是降低延迟的关键
-        // - nat: 启用 NAT (网络地址转换) 感知，帮助 CAKE 更好地区分内部和外部流量，对 Docker 等场景很重要
-        const command = `tc qdisc add dev ${interfaceName} root cake bandwidth ${speedLimit} besteffort triple-isolate nat`;
-        
-        console.log(`正在执行优化的限速命令: ${command}`);
-        await execAsync(command);
-
-        return { success: true, message: `已成功为接口 ${interfaceName} 应用优化的CAKE限速 ${speedLimit}` };
-    } catch (error) {
-        const errorMessage = (error as Error).message;
-        console.error('应用限速失败:', error);
-
-        // 如果命令失败，可能是因为内核不支持 CAKE。提供友好的提示。
-        if (errorMessage.includes('Unknown qdisc "cake"')) {
-            return {
-                success: false,
-                message: `应用限速失败: 您的系统内核似乎不支持 "cake" 队列算法。请尝试升级您的内核或安装包含 "cake" 的 iproute2 工具包。`
-            };
+        const cakeCommand = `tc qdisc add dev ${interfaceName} root cake bandwidth ${speedLimit} besteffort triple-isolate nat`;
+        console.log(`正在尝试执行优化的 CAKE 限速命令: ${cakeCommand}`);
+        await execAsync(cakeCommand);
+        return { success: true, message: `已成功为接口 ${interfaceName} 应用优化的 CAKE 限速 ${speedLimit}` };
+    } catch (cakeError) {
+        const cakeErrorMessage = (cakeError as Error).message;
+        if (cakeErrorMessage.includes('Unknown qdisc') || cakeErrorMessage.includes('Specified qdisc kind is unknown')) {
+            // 如果 CAKE 不可用，则回退到 HTB + fq_codel
+            console.warn(`CAKE 不可用 (${cakeErrorMessage.trim()})，尝试回退到 HTB + fq_codel。`);
+            try {
+                // 应用 HTB (Hierarchical Token Bucket) 来设置总带宽
+                await execAsync(`tc qdisc add dev ${interfaceName} root handle 1: htb default 1`);
+                // 为 HTB 创建一个类别来应用速率限制
+                await execAsync(`tc class add dev ${interfaceName} parent 1: classid 1:1 htb rate ${speedLimit}`);
+                // 在该类别下应用 fq_codel 算法以管理延迟
+                await execAsync(`tc qdisc add dev ${interfaceName} parent 1:1 fq_codel`);
+                
+                return { success: true, message: `CAKE 不可用。已成功为接口 ${interfaceName} 应用 fq_codel 回退限速 ${speedLimit}` };
+            } catch (fqCodelError) {
+                const fqCodelErrorMessage = (fqCodelError as Error).message;
+                console.error('fq_codel 回退失败:', fqCodelError);
+                return { success: false, message: `回退方案 fq_codel 应用失败: ${fqCodelErrorMessage}` };
+            }
+        } else {
+            // 如果是 CAKE 的其他错误
+            console.error('应用 CAKE 限速时发生未知错误:', cakeError);
+            return { success: false, message: `应用限速失败: ${cakeErrorMessage}` };
         }
-        
-        return { success: false, message: `应用限速失败: ${errorMessage}` };
     }
 };
 
@@ -61,16 +64,25 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
     try {
         const { stdout } = await execAsync(`tc qdisc show dev ${interfaceName}`);
         
-        // 检查输出中是否包含cake规则
+        // 检查是否为 CAKE 规则
         if (stdout.includes('qdisc cake')) {
-            // 尝试从输出中解析带宽值
             const speedMatch = stdout.match(/bandwidth\s+([^\s]+)/);
-            
             return {
                 success: true,
                 hasLimit: true,
                 speed: speedMatch ? speedMatch[1] : '未知',
-                message: `接口 ${interfaceName} 当前有CAKE限速规则。`
+                message: `接口 ${interfaceName} 当前有 CAKE 限速规则。`
+            };
+        } 
+        // 检查是否为 HTB + fq_codel 回退规则
+        else if (stdout.includes('qdisc htb') && stdout.includes('qdisc fq_codel')) {
+            const { stdout: classStdout } = await execAsync(`tc class show dev ${interfaceName}`);
+            const speedMatch = classStdout.match(/rate\s+([^\s]+)/);
+             return {
+                success: true,
+                hasLimit: true,
+                speed: speedMatch ? speedMatch[1].replace('bit', 'bit') : '未知', // 规范化单位
+                message: `接口 ${interfaceName} 当前有 fq_codel (HTB) 回退限速规则。`
             };
         }
         
@@ -80,7 +92,6 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
             message: `接口 ${interfaceName} 当前没有限速规则。`
         };
     } catch (error) {
-        // 如果查询命令失败（例如接口不存在），则认为没有限速
         return {
             success: true,
             hasLimit: false,
@@ -96,11 +107,10 @@ exports.getSpeedLimitStatus = async function(interfaceName: string): Promise<{
  */
 exports.removeSpeedLimit = async function(interfaceName: string): Promise<{ success: boolean; message: string }> {
     try {
-        // 使用与应用时相同的命令来删除规则
+        // 这个命令可以移除 CAKE 或 HTB 根规则
         await execAsync(`tc qdisc del dev ${interfaceName} root 2>/dev/null`);
         return { success: true, message: `已成功移除接口 ${interfaceName} 的所有限速规则。` };
     } catch (error) {
-        // 即使删除失败（可能规则已不存在），也视为成功，因为目标是确保没有规则
         console.error('移除限速时出错 (可能规则已不存在):', error);
         return { success: true, message: `已成功移除接口 ${interfaceName} 的所有限速规则。` };
     }

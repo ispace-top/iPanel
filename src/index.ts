@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { getConfig, saveConfig, verifyPassword, hasPassword } from './services/config';
 import { getSystemInfo } from './services/systemInfo';
-import { getWeather } from './services/weather';
+import { getWeather, getWeather7d } from './services/weather';
 import { getBingWallpaper } from './services/wallpaper';
 import { applySpeedLimit, removeSpeedLimit, getSpeedLimitStatus, startSmartQoS, stopSmartQoS, getSmartQoSStatus, getQoSTemplates, getRecommendedQoSConfig, detectNetworkPerformance, getNetworkInterfaces } from './services/networkService';
 
@@ -117,6 +117,20 @@ app.get('/api/weather', async (req: Request, res: Response) => {
     } catch (error) {
         const errorMessage = (error instanceof Error) ? error.message : 'An unknown error occurred';
         res.status(500).json({ error: `Failed to get weather data for ${city}: ${errorMessage}` });
+    }
+});
+
+app.get('/api/weather/7d', async (req: Request, res: Response) => {
+    const city = req.query.city as string;
+    if (!city) {
+        return res.status(400).json({ error: 'City is required' });
+    }
+    try {
+        const data = await getWeather7d(city);
+        res.json(data);
+    } catch (error) {
+        const errorMessage = (error instanceof Error) ? error.message : 'An unknown error occurred';
+        res.status(500).json({ error: `Failed to get 7-day weather data for ${city}: ${errorMessage}` });
     }
 });
 

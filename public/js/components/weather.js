@@ -75,17 +75,20 @@ export function initWeather() {
             weatherContent.innerHTML = '<div class="text-slate-400">没有配置天气城市。请在设置中添加城市。</div>';
             return;
         }
-        
+
         weatherContent.innerHTML = '<div class="text-slate-400">正在加载天气信息...</div>';
-        
+
         try {
+            const isSingleCity = cities.length === 1;
+            const endpoint = isSingleCity ? API_ENDPOINTS.weather7d : API_ENDPOINTS.weather;
+
             const results = await Promise.allSettled(
-                cities.map(city => 
-                    fetch(`${API_ENDPOINTS.weather}?city=${encodeURIComponent(city)}`)
+                cities.map(city =>
+                    fetch(`${endpoint}?city=${encodeURIComponent(city)}`)
                     .then(res => handleApiResponse(res, '获取天气信息失败'))
                 )
             );
-            
+
             const weatherData = results
                 .map((result, index) => {
                     if (result.status === 'fulfilled') {
@@ -96,83 +99,112 @@ export function initWeather() {
                     }
                 })
                 .filter(data => data !== null);
-            
+
             if (weatherData.length === 0) {
                 weatherContent.innerHTML = '<div class="text-red-400">无法获取天气信息。请检查网络连接和API密钥配置。</div>';
                 return;
             }
-            
-            // 渲染天气信息
-            const weatherHTML = weatherData.map((weather, index) => {
-                if (index === 0) {
-                    // 主要城市 - 大字体显示
-                    return `
-                        <div class="weather-item border-b border-white/10 pb-4 mb-4">
-                            <div class="text-center mb-3">
-                                <h5 class="font-medium text-slate-100 mb-1">${weather.city}</h5>
-                                <div class="flex items-center justify-center gap-2 mb-2">
-                                    <span class="text-2xl">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
-                                    <div class="text-3xl font-light ${getColorForWeatherTemp(weather.now.temp)}">${weather.now.temp}°C</div>
-                                </div>
-                                <div class="text-sm text-slate-300">${weather.now.text}</div>
-                            </div>
-                            
-                            ${weather.forecast && weather.forecast.length > 0 ? `
-                                <div class="space-y-1">
-                                    ${weather.forecast.slice(1, 3).map(day => `
-                                        <div class="grid grid-cols-4 gap-2 items-center text-xs">
-                                            <span class="text-slate-200 text-center">${day.date}</span>
-                                            <span class="text-lg text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
-                                            <span class="text-slate-100 font-mono text-center">${day.temp}</span>
-                                            <span class="text-slate-200 text-center truncate">${day.description}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                } else {
-                    // 次要城市 - 城市名行与预报行格式保持一致，城市名更突出
-                    return `
-                        <div class="weather-item border-b border-white/10 last:border-b-0 pb-3 last:pb-0 mb-3 last:mb-0">
-                            ${weather.forecast && weather.forecast.length > 0 ? `
-                                <div class="space-y-1">
-                                    <div class="grid grid-cols-4 gap-2 items-center text-xs">
-                                        <span class="text-white text-center font-bold text-sm bg-white/10 px-2 py-1 rounded-md">${weather.city}</span>
-                                        <span class="text-lg text-center">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
-                                        <span class="text-slate-100 font-mono text-center">${weather.now.tempRange || weather.now.temp + '°'}</span>
-                                        <span class="text-slate-200 text-center truncate">${weather.now.text}</span>
-                                    </div>
-                                    ${weather.forecast.slice(1, 3).map(day => `
-                                        <div class="grid grid-cols-4 gap-2 items-center text-xs">
-                                            <span class="text-slate-200 text-center">${day.date}</span>
-                                            <span class="text-lg text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
-                                            <span class="text-slate-100 font-mono text-center">${day.temp}</span>
-                                            <span class="text-slate-200 text-center truncate">${day.description}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : `
-                                <div class="grid grid-cols-4 gap-2 items-center text-xs">
-                                    <span class="text-white text-center font-bold text-sm bg-white/10 px-2 py-1 rounded-md">${weather.city}</span>
-                                    <span class="text-lg text-center">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
-                                    <span class="text-slate-100 font-mono text-center">${weather.now.tempRange || weather.now.temp + '°'}</span>
-                                    <span class="text-slate-200 text-center truncate">${weather.now.text}</span>
-                                </div>
-                            `}
-                        </div>
-                    `;
-                }
-            }).join('');
-            
-            weatherContent.innerHTML = weatherHTML;
-            
+
+            if (isSingleCity) {
+                render7DayForecast(weatherData[0]);
+            } else {
+                renderMultiCityWeather(weatherData);
+            }
+
         } catch (error) {
             console.error('更新天气信息失败:', error);
             weatherContent.innerHTML = '<div class="text-red-400">获取天气信息失败。</div>';
         }
     }
+
+    function render7DayForecast(weather) {
+        const weatherHTML = `
+            <div class="weather-item">
+                <div class="text-center mb-3">
+                    <h5 class="font-medium text-slate-100 mb-1">${weather.city}</h5>
+                    <div class="flex items-center justify-center gap-2 mb-2">
+                        <span class="text-2xl">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
+                        <div class="text-3xl font-light ${getColorForWeatherTemp(weather.now.temp)}">${weather.now.temp}°C</div>
+                    </div>
+                    <div class="text-sm text-slate-300">${weather.now.text}</div>
+                </div>
+                
+                ${weather.forecast && weather.forecast.length > 0 ? `
+                    <div class="space-y-1">
+                        ${weather.forecast.slice(1).map(day => `
+                            <div class="grid grid-cols-4 gap-2 items-center text-xs">
+                                <span class="text-slate-200 text-center">${day.date}</span>
+                                <span class="text-lg text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
+                                <span class="text-slate-100 font-mono text-center">${day.temp}</span>
+                                <span class="text-slate-200 text-center truncate">${day.description}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        weatherContent.innerHTML = weatherHTML;
+    }
+
+    function renderMultiCityWeather(weatherData) {
+        const weatherHTML = weatherData.map((weather, index) => {
+            if (index === 0) {
+                // Main city display
+                return `
+                    <div class="weather-item border-b border-white/10 pb-4 mb-4">
+                        <div class="text-center mb-3">
+                            <h5 class="font-medium text-slate-100 mb-1">${weather.city}</h5>
+                            <div class="flex items-center justify-center gap-2 mb-2">
+                                <span class="text-2xl">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
+                                <div class="text-3xl font-light ${getColorForWeatherTemp(weather.now.temp)}">${weather.now.temp}°C</div>
+                            </div>
+                            <div class="text-sm text-slate-300">${weather.now.text}</div>
+                        </div>
+                        
+                        ${weather.forecast && weather.forecast.length > 0 ? `
+                            <div class="space-y-1">
+                                ${weather.forecast.slice(1, 3).map(day => `
+                                    <div class="grid grid-cols-4 gap-2 items-center text-xs">
+                                        <span class="text-slate-200 text-center">${day.date}</span>
+                                        <span class="text-lg text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
+                                        <span class="text-slate-100 font-mono text-center">${day.temp}</span>
+                                        <span class="text-slate-200 text-center truncate">${day.description}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // Secondary city display
+                return `
+                    <div class="weather-item border-b border-white/10 last:border-b-0 pb-3 last:pb-0 mb-3 last:mb-0">
+                        <div class="space-y-2">
+                            <div class="grid grid-cols-1">
+                                <span class="text-sky-300 text-sm font-medium flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3 h-3"></i>${weather.city}</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2 items-center text-xs">
+                                <span class="text-slate-200 text-center">${weather.now.date || '今天'}</span>
+                                <span class="text-lg text-center">${getWeatherIcon(weather.now.iconId || weather.now.icon)}</span>
+                                <span class="text-slate-100 font-mono text-center">${weather.now.tempRange || weather.now.temp + '°'}</span>
+                                <span class="text-slate-200 text-center truncate">${weather.now.text}</span>
+                            </div>
+                            ${weather.forecast.slice(1, 3).map(day => `
+                                <div class="grid grid-cols-4 gap-2 items-center text-xs">
+                                    <span class="text-slate-200 text-center">${day.date}</span>
+                                    <span class="text-lg text-center">${getWeatherIcon(day.iconId || day.icon)}</span>
+                                    <span class="text-slate-100 font-mono text-center">${day.temp}</span>
+                                    <span class="text-slate-200 text-center truncate">${day.description}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
+        weatherContent.innerHTML = weatherHTML;
+        lucide.createIcons(); // Re-render icons
+    }
     
-    // 返回更新函数供外部调用
     return { renderWeather };
 }

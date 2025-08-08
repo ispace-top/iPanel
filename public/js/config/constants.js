@@ -1,5 +1,6 @@
 export const API_ENDPOINTS = {
     weather: '/api/weather',
+    weather7d: '/api/weather/7d',
     system: '/api/system',
     config: '/api/config',
     bing: '/api/bing-wallpaper',
@@ -7,7 +8,10 @@ export const API_ENDPOINTS = {
         icon: '/api/upload/icon',
         background: '/api/upload/background'
     },
-    network: '/api/network/speed-limit'
+    network: '/api/network/speed-limit',
+    smartQos: '/api/network/smart-qos',
+    qosTemplates: '/api/network/qos-templates',
+    networkInterfaces: '/api/network/interfaces'
 };
 
 export const UPDATE_INTERVALS = {

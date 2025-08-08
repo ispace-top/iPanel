@@ -253,10 +253,30 @@ export async function removeSpeedLimit(interfaceName: string): Promise<{ success
  */
 export async function getNetworkInterfaces(): Promise<string[]> {
     try {
-        const { stdout } = await execAsync(`ip link show | grep '^[0-9]' | awk -F': ' '{print $2}' | grep -v lo`);
-        return stdout.trim().split('\n').filter(iface => iface.length > 0);
+        let command: string;
+        const platform = process.platform;
+        
+        if (platform === 'darwin') {
+            // macOS 使用 ifconfig
+            command = `ifconfig | grep '^[a-z]' | awk '{print $1}' | sed 's/:$//' | grep -v lo`;
+        } else if (platform === 'linux') {
+            // Linux 使用 ip 命令
+            command = `ip link show | grep '^[0-9]' | awk -F': ' '{print $2}' | grep -v lo`;
+        } else {
+            // Windows 或其他平台的默认值
+            return ['eth0'];
+        }
+        
+        const { stdout } = await execAsync(command);
+        const interfaces = stdout.trim().split('\n').filter(iface => iface.length > 0);
+        return interfaces.length > 0 ? interfaces : ['eth0'];
     } catch (error) {
         console.error('获取网络接口失败:', error);
-        return ['eth0']; // 返回默认值
+        // 根据平台返回合适的默认值
+        const platform = process.platform;
+        if (platform === 'darwin') {
+            return ['en0']; // macOS 常见的网络接口
+        }
+        return ['eth0']; // Linux 默认值
     }
 }

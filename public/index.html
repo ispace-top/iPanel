@@ -116,6 +116,14 @@
                 <div class="mt-6">
                     <h3 class="font-semibold text-lg mb-2">网络设置</h3>
                     <div class="p-3 bg-white/10 rounded-lg mb-4">
+                        <div class="space-y-2">
+                            <label for="network-interface" class="block text-sm">网络接口</label>
+                            <select id="network-interface" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                                <!-- Interfaces will be populated by JS -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-white/10 rounded-lg mb-4">
                         <div class="flex items-center justify-between mb-4">
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input type="checkbox" id="enable-speed-limit" class="form-checkbox h-4 w-4 text-blue-500 bg-transparent border-white/30">
@@ -125,14 +133,6 @@
                         
                         <div id="speed-limit-settings" class="pl-6 space-y-4 hidden">
                             <div class="space-y-2">
-                                <label for="network-interface" class="block text-sm">网络接口</label>
-                                <select id="network-interface" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
-                                    <option value="eth0">eth0</option>
-                                    <option value="wlan0">wlan0</option>
-                                </select>
-                            </div>
-
-                            <div class="space-y-2">
                                 <label for="speed-limit-value" class="block text-sm">限速值 (例如: 3mbit)</label>
                                 <input type="text" id="speed-limit-value" placeholder="输入限速值" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
                             </div>
@@ -140,6 +140,30 @@
                             <div class="flex gap-3 mt-4">
                                 <button id="apply-speed-limit" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex-grow">应用限速</button>
                                 <button id="remove-speed-limit" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex-grow">移除限速</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 智能QoS设置 -->
+                    <div class="p-3 bg-white/10 rounded-lg">
+                        <div class="flex items-center justify-between mb-4">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" id="enable-smart-qos" class="form-checkbox h-4 w-4 text-blue-500 bg-transparent border-white/30">
+                                <span>启用智能QoS</span>
+                            </label>
+                        </div>
+
+                        <div id="smart-qos-settings" class="pl-6 space-y-4 hidden">
+                            <div class="space-y-2">
+                                <label for="qos-template" class="block text-sm">QoS模板</label>
+                                <select id="qos-template" class="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400">
+                                    <!-- 模板将由JS动态填充 -->
+                                </select>
+                                <p id="qos-template-description" class="text-sm text-slate-400 mt-2"></p>
+                            </div>
+                            <div class="flex gap-3 mt-4">
+                                <button id="start-smart-qos" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex-grow">启动智能QoS</button>
+                                <button id="stop-smart-qos" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-colors flex-grow">停止智能QoS</button>
                             </div>
                         </div>
                     </div>

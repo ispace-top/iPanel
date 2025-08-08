@@ -9,6 +9,8 @@ export const QoSTemplates = {
      * 适合: 100Mbps下载 / 20Mbps上传的家庭宽带
      */
     homeBroadband: {
+        name: '家庭宽带',
+        description: '适用于大多数家庭网络，优化下载和日常网页浏览体验。',
         interface: 'eth0',
         totalUpload: '18mbit',      // 预留2Mbps缓冲
         totalDownload: '95mbit',    // 预留5Mbps缓冲
@@ -24,6 +26,8 @@ export const QoSTemplates = {
      * 适合: 1000Mbps对等连接
      */
     highBandwidth: {
+        name: '高带宽/服务器',
+        description: '适用于高速网络环境，如千兆光纤，确保服务器和企业应用流畅运行。',
         interface: 'eth0',
         totalUpload: '900mbit',
         totalDownload: '900mbit',
@@ -39,6 +43,8 @@ export const QoSTemplates = {
      * 适合: 20Mbps下载 / 2Mbps上传
      */
     lowBandwidth: {
+        name: '低带宽/ADSL',
+        description: '适用于网络速度较慢的环境，优先保障基础网络服务的稳定性。',
         interface: 'ppp0',
         totalUpload: '1800kbit',
         totalDownload: '18mbit',
@@ -54,6 +60,8 @@ export const QoSTemplates = {
      * 专门针对在线游戏延迟优化
      */
     gaming: {
+        name: '游戏优化',
+        description: '优先处理游戏流量，最大限度降低游戏延迟和卡顿。',
         interface: 'eth0',
         totalUpload: '18mbit',
         totalDownload: '95mbit',
